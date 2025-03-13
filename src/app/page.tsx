@@ -8,12 +8,33 @@ declare global {
   }
 }
 
+interface Cell {
+  id: string;
+  code: string;
+  output: string;
+  error: string | null;
+  parentId: string | null;
+  executionContext: any;
+}
+
+interface TreeNode {
+  cell: Cell;
+  children: TreeNode[];
+}
+
 export default function Home() {
-  const [code, setCode] = useState("");
-  const [output, setOutput] = useState("");
+  const [cells, setCells] = useState<Cell[]>([
+    {
+      id: "root",
+      code: "",
+      output: "",
+      error: null,
+      parentId: null,
+      executionContext: null,
+    },
+  ]);
   const [loading, setLoading] = useState(false);
   const [pyodide, setPyodide] = useState<any>(null);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function initPyodide() {
@@ -32,18 +53,39 @@ export default function Home() {
             setPyodide(pyodideInstance);
           } catch (err) {
             console.error("Error loading Pyodide:", err);
-            setError("Failed to initialize Python environment");
+            setCells((cells) =>
+              cells.map((cell) =>
+                cell.id === "root"
+                  ? {
+                      ...cell,
+                      error: "Failed to initialize Python environment",
+                    }
+                  : cell
+              )
+            );
           } finally {
             setLoading(false);
           }
         };
 
         script.onerror = () => {
-          setError("Failed to load Pyodide script");
+          setCells((cells) =>
+            cells.map((cell) =>
+              cell.id === "root"
+                ? { ...cell, error: "Failed to load Pyodide script" }
+                : cell
+            )
+          );
           setLoading(false);
         };
       } catch (err) {
-        setError("Failed to load Python environment");
+        setCells((cells) =>
+          cells.map((cell) =>
+            cell.id === "root"
+              ? { ...cell, error: "Failed to load Python environment" }
+              : cell
+          )
+        );
         console.error(err);
         setLoading(false);
       }
@@ -59,91 +101,304 @@ export default function Home() {
     };
   }, []);
 
-  const runCode = async () => {
+  const forkCell = async (cellId: string) => {
+    const parentCell = cells.find((cell) => cell.id === cellId);
+    if (!parentCell || !pyodide) return;
+
+    // Create two new cells with independent execution contexts
+    const newCells = await Promise.all([
+      // Create first branch
+      (async () => {
+        // Create a fresh namespace
+        const namespace = pyodide.globals.get("dict")();
+
+        // Set up basic environment
+        await pyodide.runPythonAsync(
+          `
+import sys
+from io import StringIO
+        `,
+          { globals: namespace }
+        );
+
+        // Load parent context if it exists
+        if (parentCell.executionContext) {
+          // Create a temporary namespace to hold the context
+          const tempNamespace = pyodide.globals.get("dict")();
+          tempNamespace.update(parentCell.executionContext);
+          namespace.update(tempNamespace);
+        }
+
+        // Execute parent code in this new context
+        await pyodide.runPythonAsync(parentCell.code, { globals: namespace });
+
+        return {
+          id: `${cellId}-fork1-${Date.now()}`,
+          code: parentCell.code,
+          output: "",
+          error: null,
+          parentId: cellId,
+          executionContext: namespace,
+        };
+      })(),
+      // Create second branch with its own independent context
+      (async () => {
+        // Create a fresh namespace
+        const namespace = pyodide.globals.get("dict")();
+
+        // Set up basic environment
+        await pyodide.runPythonAsync(
+          `
+import sys
+from io import StringIO
+        `,
+          { globals: namespace }
+        );
+
+        // Load parent context if it exists
+        if (parentCell.executionContext) {
+          // Create a temporary namespace to hold the context
+          const tempNamespace = pyodide.globals.get("dict")();
+          tempNamespace.update(parentCell.executionContext);
+          namespace.update(tempNamespace);
+        }
+
+        // Execute parent code in this new context
+        await pyodide.runPythonAsync(parentCell.code, { globals: namespace });
+
+        return {
+          id: `${cellId}-fork2-${Date.now()}`,
+          code: parentCell.code,
+          output: "",
+          error: null,
+          parentId: cellId,
+          executionContext: namespace,
+        };
+      })(),
+    ]);
+
+    setCells([...cells, ...newCells]);
+  };
+
+  const runCode = async (cellId: string) => {
     if (!pyodide) return;
 
-    setError(null);
-    setOutput("");
+    const cellIndex = cells.findIndex((cell) => cell.id === cellId);
+    if (cellIndex === -1) return;
+
+    const updatedCells = [...cells];
+    const cell = updatedCells[cellIndex];
+    cell.error = null;
+    cell.output = "";
 
     try {
-      // Redirect stdout to capture print statements
-      await pyodide.runPythonAsync(`
-        import sys
-        from io import StringIO
-        sys.stdout = StringIO()
-      `);
+      // Create a fresh namespace
+      const namespace = pyodide.globals.get("dict")();
 
-      // Run the user's code
-      await pyodide.runPythonAsync(code);
+      // Set up basic environment
+      await pyodide.runPythonAsync(
+        `
+import sys
+from io import StringIO
+      `,
+        { globals: namespace }
+      );
 
-      // Get the captured output
-      const stdout = await pyodide.runPythonAsync("sys.stdout.getvalue()");
-      setOutput(stdout as string);
+      // Load the cell's saved context if it exists
+      if (cell.executionContext) {
+        // Create a temporary namespace to hold the context
+        const tempNamespace = pyodide.globals.get("dict")();
+        tempNamespace.update(cell.executionContext);
+        namespace.update(tempNamespace);
+      }
+
+      // Set up stdout capture
+      await pyodide.runPythonAsync("sys.stdout = StringIO()", {
+        globals: namespace,
+      });
+
+      // Run the cell's code
+      await pyodide.runPythonAsync(cell.code, { globals: namespace });
+
+      // Get the output
+      const stdout = await pyodide.runPythonAsync("sys.stdout.getvalue()", {
+        globals: namespace,
+      });
+      cell.output = stdout;
+
+      // Save the new execution context
+      cell.executionContext = namespace;
 
       // Reset stdout
-      await pyodide.runPythonAsync("sys.stdout = sys.__stdout__");
+      await pyodide.runPythonAsync("sys.stdout = sys.__stdout__", {
+        globals: namespace,
+      });
+
+      setCells(updatedCells);
     } catch (err: any) {
-      setError(err.message);
+      cell.error = err.message;
+      setCells(updatedCells);
     }
   };
 
-  return (
-    <div className="min-h-screen p-8 flex flex-col items-center justify-center gap-8 font-[family-name:var(--font-geist-sans)]">
-      <div className="max-w-2xl w-full space-y-4">
-        <h1 className="text-2xl font-bold text-center">Python Code Input</h1>
+  // Helper function to build the tree structure
+  const buildTree = (cells: Cell[]): TreeNode | null => {
+    const root = cells.find((cell) => !cell.parentId);
+    if (!root) return null;
 
-        <div className="space-y-2">
-          <p className="text-sm text-gray-600 dark:text-gray-300">
-            Enter your Python code below. You can include:
-          </p>
-          <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-300 space-y-1">
-            <li>Functions and classes</li>
-            <li>Data structures and algorithms</li>
-            <li>Any valid Python syntax</li>
-          </ul>
-        </div>
+    const buildNode = (cell: Cell): TreeNode => {
+      return {
+        cell,
+        children: cells
+          .filter((c) => c.parentId === cell.id)
+          .map((childCell) => buildNode(childCell)),
+      };
+    };
 
-        <textarea
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-          className="w-full h-64 p-4 font-mono text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="# Enter your Python code here
-def example():
-    return 'Hello, World!'
+    return buildNode(root);
+  };
 
-print(example())"
-        />
+  // Helper function to render a tree node and its children
+  const renderTreeNode = (node: TreeNode) => {
+    const { cell, children } = node;
+    const isRoot = !cell.parentId;
 
-        <div className="flex justify-end">
-          <button
-            onClick={runCode}
-            disabled={loading || !pyodide}
-            className={`px-4 py-2 rounded-lg font-medium text-white ${
-              loading || !pyodide
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-blue-500 hover:bg-blue-600"
-            }`}
+    return (
+      <div key={cell.id} className="flex flex-col items-center gap-24">
+        <div className="relative">
+          {/* Parent connector - vertical line going up */}
+          {!isRoot && (
+            <div className="absolute left-1/2 -translate-x-1/2 -top-12 w-0.5 h-12 bg-gray-200 dark:bg-gray-700" />
+          )}
+
+          {/* Child connectors */}
+          {children.length > 0 && (
+            <>
+              {/* Vertical line going down */}
+              <div className="absolute left-1/2 -translate-x-1/2 -bottom-12 w-0.5 h-12 bg-gray-200 dark:bg-gray-700" />
+
+              {/* Horizontal line for children */}
+              {children.length > 1 && (
+                <div
+                  className="absolute -bottom-12 h-0.5 bg-gray-200 dark:bg-gray-700"
+                  style={{
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    width: `${(children.length - 1) * 544 + 2}px`,
+                  }}
+                />
+              )}
+            </>
+          )}
+
+          <div
+            className={`
+            w-[32rem] space-y-4 border-2 rounded-lg p-4
+            ${
+              isRoot
+                ? "border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/10"
+                : "border-gray-200 dark:border-gray-700"
+            }
+          `}
           >
-            {loading ? "Loading Python..." : "Run Code"}
-          </button>
+            {/* Cell header with branch count */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span
+                  className={`text-sm font-medium ${
+                    isRoot
+                      ? "text-blue-600 dark:text-blue-400"
+                      : "text-gray-600 dark:text-gray-400"
+                  }`}
+                >
+                  {isRoot ? "Root" : "Branch"}
+                </span>
+                {cell.parentId && (
+                  <span className="text-xs text-gray-500">
+                    (from {cell.parentId})
+                  </span>
+                )}
+              </div>
+              {children.length > 0 && (
+                <span className="text-xs text-gray-500">
+                  {children.length} branch{children.length > 1 ? "es" : ""}
+                </span>
+              )}
+            </div>
+
+            <textarea
+              value={cell.code}
+              onChange={(e) => {
+                const updatedCells = cells.map((c) =>
+                  c.id === cell.id ? { ...c, code: e.target.value } : c
+                );
+                setCells(updatedCells);
+              }}
+              className="w-full h-48 p-4 font-mono text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="# Enter your Python code here"
+            />
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => forkCell(cell.id)}
+                disabled={loading || !pyodide}
+                className={`px-4 py-2 rounded-lg font-medium text-white ${
+                  loading || !pyodide
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-green-500 hover:bg-green-600"
+                }`}
+              >
+                Branch
+              </button>
+
+              <button
+                onClick={() => runCode(cell.id)}
+                disabled={loading || !pyodide}
+                className={`px-4 py-2 rounded-lg font-medium text-white ${
+                  loading || !pyodide
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-blue-500 hover:bg-blue-600"
+                }`}
+              >
+                {loading ? "Loading Python..." : "Run"}
+              </button>
+            </div>
+
+            {cell.error && (
+              <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <pre className="text-red-600 dark:text-red-400 text-sm whitespace-pre-wrap font-mono">
+                  {cell.error}
+                </pre>
+              </div>
+            )}
+
+            {cell.output && (
+              <div className="p-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg">
+                <h2 className="text-sm font-semibold mb-2">Output:</h2>
+                <pre className="text-sm whitespace-pre-wrap font-mono">
+                  {cell.output}
+                </pre>
+              </div>
+            )}
+          </div>
         </div>
 
-        {error && (
-          <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-            <pre className="text-red-600 dark:text-red-400 text-sm whitespace-pre-wrap font-mono">
-              {error}
-            </pre>
+        {/* Render children */}
+        {children.length > 0 && (
+          <div className="flex justify-center gap-8">
+            {children.map((child) => renderTreeNode(child))}
           </div>
         )}
+      </div>
+    );
+  };
 
-        {output && (
-          <div className="p-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg">
-            <h2 className="text-sm font-semibold mb-2">Output:</h2>
-            <pre className="text-sm whitespace-pre-wrap font-mono">
-              {output}
-            </pre>
-          </div>
-        )}
+  return (
+    <div className="min-h-screen p-8 flex flex-col items-center gap-8 font-[family-name:var(--font-geist-sans)]">
+      <h1 className="text-2xl font-bold text-center">Python Code Input</h1>
+
+      <div className="w-full max-w-[90rem] px-8 overflow-x-auto">
+        {buildTree(cells) && renderTreeNode(buildTree(cells)!)}
       </div>
     </div>
   );
