@@ -234,6 +234,57 @@ from io import StringIO
         globals: namespace,
       });
 
+      // Update all descendant cells recursively
+      const updateDescendants = async (parentId: string) => {
+        const children = updatedCells.filter((c) => c.parentId === parentId);
+
+        for (const child of children) {
+          // Create a fresh namespace for the child
+          const childNamespace = pyodide.globals.get("dict")();
+
+          // Set up basic environment
+          await pyodide.runPythonAsync(
+            `
+import sys
+from io import StringIO
+          `,
+            { globals: childNamespace }
+          );
+
+          // Copy parent's context
+          const tempNamespace = pyodide.globals.get("dict")();
+          tempNamespace.update(namespace);
+          childNamespace.update(tempNamespace);
+
+          // Run the child's code in the new context
+          await pyodide.runPythonAsync("sys.stdout = StringIO()", {
+            globals: childNamespace,
+          });
+          await pyodide.runPythonAsync(child.code, { globals: childNamespace });
+
+          // Update child's output
+          const childStdout = await pyodide.runPythonAsync(
+            "sys.stdout.getvalue()",
+            { globals: childNamespace }
+          );
+          child.output = childStdout;
+
+          // Save child's new context
+          child.executionContext = childNamespace;
+
+          // Reset stdout
+          await pyodide.runPythonAsync("sys.stdout = sys.__stdout__", {
+            globals: childNamespace,
+          });
+
+          // Recursively update this child's descendants
+          await updateDescendants(child.id);
+        }
+      };
+
+      // Start the recursive update from this cell
+      await updateDescendants(cellId);
+
       setCells(updatedCells);
     } catch (err: any) {
       cell.error = err.message;
