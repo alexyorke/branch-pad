@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
     "jszip": "^3.10.1",
     "next": "15.2.2",
     "react": "^19.0.0",

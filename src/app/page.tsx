@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { exportAndDownload } from "../utils/export";
 import JSZip from "jszip";
+import Editor, { loader } from "@monaco-editor/react";
 
 declare global {
   interface Window {
@@ -333,6 +334,123 @@ requirements
         document.head.removeChild(script);
       }
     };
+  }, []);
+
+  // Configure Monaco Editor with Python features
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      loader.init().then((monaco) => {
+        // Register Python language features
+        monaco.languages.register({ id: "python" });
+
+        // Configure Python language settings
+        monaco.languages.setLanguageConfiguration("python", {
+          comments: {
+            lineComment: "#",
+            blockComment: ['"""', '"""'],
+          },
+          brackets: [
+            ["{", "}"],
+            ["[", "]"],
+            ["(", ")"],
+          ],
+          autoClosingPairs: [
+            { open: "{", close: "}" },
+            { open: "[", close: "]" },
+            { open: "(", close: ")" },
+            { open: '"', close: '"', notIn: ["string"] },
+            { open: "'", close: "'", notIn: ["string", "comment"] },
+          ],
+          surroundingPairs: [
+            { open: "{", close: "}" },
+            { open: "[", close: "]" },
+            { open: "(", close: ")" },
+            { open: '"', close: '"' },
+            { open: "'", close: "'" },
+          ],
+          indentationRules: {
+            increaseIndentPattern: new RegExp(
+              "^((?!#).)*(\\:\\s*(#.*)?$|\\{[^}\"']*$|\\[[^\\]\"']*$|\\([^)\"']*$)"
+            ),
+            decreaseIndentPattern: new RegExp("^\\s*[\\}\\]\\)]"),
+          },
+        });
+
+        // Add Python snippets
+        monaco.languages.registerCompletionItemProvider("python", {
+          provideCompletionItems: (model, position) => {
+            const word = model.getWordUntilPosition(position);
+            const range = {
+              startLineNumber: position.lineNumber,
+              endLineNumber: position.lineNumber,
+              startColumn: word.startColumn,
+              endColumn: word.endColumn,
+            };
+
+            const suggestions = [
+              {
+                label: "def",
+                kind: monaco.languages.CompletionItemKind.Snippet,
+                insertText:
+                  "def ${1:function_name}(${2:parameters}):\n\t${3:pass}",
+                insertTextRules:
+                  monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                documentation: "Define a new function",
+                range,
+              },
+              {
+                label: "class",
+                kind: monaco.languages.CompletionItemKind.Snippet,
+                insertText:
+                  "class ${1:ClassName}:\n\tdef __init__(self):\n\t\t${2:pass}",
+                insertTextRules:
+                  monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                documentation: "Create a new class",
+                range,
+              },
+              {
+                label: "if",
+                kind: monaco.languages.CompletionItemKind.Snippet,
+                insertText: "if ${1:condition}:\n\t${2:pass}",
+                insertTextRules:
+                  monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                documentation: "If statement",
+                range,
+              },
+              {
+                label: "for",
+                kind: monaco.languages.CompletionItemKind.Snippet,
+                insertText: "for ${1:item} in ${2:items}:\n\t${3:pass}",
+                insertTextRules:
+                  monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                documentation: "For loop",
+                range,
+              },
+              {
+                label: "while",
+                kind: monaco.languages.CompletionItemKind.Snippet,
+                insertText: "while ${1:condition}:\n\t${2:pass}",
+                insertTextRules:
+                  monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                documentation: "While loop",
+                range,
+              },
+              {
+                label: "try",
+                kind: monaco.languages.CompletionItemKind.Snippet,
+                insertText:
+                  "try:\n\t${1:pass}\nexcept ${2:Exception} as ${3:e}:\n\t${4:pass}",
+                insertTextRules:
+                  monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                documentation: "Try-except block",
+                range,
+              },
+            ];
+            return { suggestions };
+          },
+        });
+      });
+    }
   }, []);
 
   const getRandomColor = () => {
@@ -807,18 +925,66 @@ from io import StringIO
               </div>
             </div>
 
-            <textarea
-              value={cell.code}
-              onChange={(e) => {
-                e.stopPropagation();
-                const updatedCells = cells.map((c) =>
-                  c.id === cell.id ? { ...c, code: e.target.value } : c
-                );
-                setCells(updatedCells);
-              }}
-              className="w-full h-48 p-4 font-mono text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="# Enter your Python code here"
-            />
+            <div className="h-48 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+              <Editor
+                height="100%"
+                defaultLanguage="python"
+                theme={
+                  typeof window !== "undefined" &&
+                  window.matchMedia("(prefers-color-scheme: dark)").matches
+                    ? "vs-dark"
+                    : "light"
+                }
+                value={cell.code}
+                onChange={(value) => {
+                  if (value !== undefined) {
+                    const updatedCells = cells.map((c) =>
+                      c.id === cell.id ? { ...c, code: value } : c
+                    );
+                    setCells(updatedCells);
+                  }
+                }}
+                options={{
+                  minimap: { enabled: false },
+                  scrollBeyondLastLine: false,
+                  fontSize: 14,
+                  lineNumbers: "on",
+                  renderLineHighlight: "all",
+                  automaticLayout: true,
+                  tabSize: 4,
+                  wordWrap: "on",
+                  suggest: {
+                    showKeywords: true,
+                    showSnippets: true,
+                    preview: true,
+                    snippetsPreventQuickSuggestions: false,
+                  },
+                  quickSuggestions: {
+                    other: true,
+                    comments: true,
+                    strings: true,
+                  },
+                  acceptSuggestionOnEnter: "on",
+                  tabCompletion: "on",
+                  formatOnType: true,
+                  formatOnPaste: true,
+                  bracketPairColorization: {
+                    enabled: true,
+                  },
+                  autoIndent: "full",
+                  detectIndentation: true,
+                }}
+                onMount={(editor, monaco) => {
+                  // Add custom keybinding for code formatting
+                  editor.addCommand(
+                    monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyF,
+                    () => {
+                      editor.getAction("editor.action.formatDocument").run();
+                    }
+                  );
+                }}
+              />
+            </div>
 
             <div
               className="flex justify-end gap-2"
@@ -961,7 +1127,7 @@ from io import StringIO
       if (a[i - 1] === b[j - 1]) {
         unchanged.unshift(a[i - 1]);
         backtrack(dp, a, b, i - 1, j - 1);
-      } else if (dp[i - 1][j] > dp[i][j - 1]) {
+      } else if ((dp[i - 1] ?? [])[j] > (dp[i] ?? [])[j - 1]) {
         removed.unshift(a[i - 1]);
         backtrack(dp, a, b, i - 1, j);
       } else {
