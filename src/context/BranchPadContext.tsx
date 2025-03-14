@@ -65,6 +65,7 @@ interface BranchPadContextType {
   generateDeploymentFiles: (cellId: string) => Promise<void>;
   getRandomColor: () => string;
   runParameterSweep: (cellId: string, parameters: Parameter[]) => Promise<void>;
+  deleteCell: (cellId: string) => void;
 }
 
 const BranchPadContext = createContext<BranchPadContextType | undefined>(
@@ -117,6 +118,8 @@ export function BranchPadProvider({ children }: { children: ReactNode }) {
   const [cellPositions, setCellPositions] = useState<
     Record<string, { x: number; y: number }>
   >({});
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [cellToDelete, setCellToDelete] = useState<string | null>(null);
 
   const toggleBranch = (cellId: string) => {
     setCollapsedBranches((prev) => {
@@ -854,6 +857,36 @@ from io import StringIO
     setCells(updatedCells);
   };
 
+  // Function to get all descendant cell IDs
+  const getDescendantCellIds = (cellId: string): string[] => {
+    const descendants: string[] = [];
+    const stack = [cellId];
+
+    while (stack.length > 0) {
+      const currentId = stack.pop()!;
+      descendants.push(currentId);
+
+      // Add children to stack
+      const children = cells.filter((c) => c.parentId === currentId);
+      stack.push(...children.map((c) => c.id));
+    }
+
+    return descendants;
+  };
+
+  // Function to delete a cell and all its descendants
+  const deleteCell = (cellId: string) => {
+    const cellsToDelete = getDescendantCellIds(cellId);
+    setCells(cells.filter((cell) => !cellsToDelete.includes(cell.id)));
+
+    // Also clean up positions
+    const newPositions = { ...cellPositions };
+    cellsToDelete.forEach((id) => {
+      delete newPositions[id];
+    });
+    setCellPositions(newPositions);
+  };
+
   const value = {
     cells,
     setCells,
@@ -895,6 +928,7 @@ from io import StringIO
     generateDeploymentFiles,
     getRandomColor,
     runParameterSweep,
+    deleteCell,
   };
 
   return (

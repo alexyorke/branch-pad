@@ -17,6 +17,7 @@ interface DraggableCellProps {
     cellId: string,
     position: { x: number; y: number }
   ) => void;
+  onDelete: () => void;
 }
 
 export function DraggableCell({
@@ -28,6 +29,7 @@ export function DraggableCell({
   isSelected,
   position,
   onPositionChange,
+  onDelete,
 }: DraggableCellProps) {
   const {
     comparison,
@@ -51,8 +53,12 @@ export function DraggableCell({
 
   // Handle mouse down for dragging
   const handleMouseDown = (e: React.MouseEvent) => {
-    // Only start dragging when holding the header area
-    if ((e.target as HTMLElement).closest(".cell-drag-handle")) {
+    // Only start dragging when holding the header area and not clicking the delete button
+    const target = e.target as HTMLElement;
+    if (
+      target.closest(".cell-drag-handle") &&
+      !target.closest(".delete-button")
+    ) {
       e.preventDefault();
       e.stopPropagation();
       setIsDragging(true);
@@ -128,7 +134,7 @@ export function DraggableCell({
       <div className="relative">
         {/* Drag handle - subtle design */}
         <div
-          className="cell-drag-handle absolute -top-2 left-0 right-0 flex flex-col items-center group z-20"
+          className="cell-drag-handle absolute -top-2 left-0 right-16 flex flex-col items-center group z-20"
           style={{ cursor: isDragging ? "grabbing" : "grab" }}
         >
           {/* Subtle pill shape that expands on hover */}
@@ -141,6 +147,30 @@ export function DraggableCell({
           {isDragging && (
             <div className="absolute -bottom-[2px] left-0 right-0 h-[2px] bg-primary/50 animate-pulse" />
           )}
+        </div>
+
+        <div className="absolute top-0 right-0 p-2 z-30">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            className="delete-button text-gray-500 hover:text-red-500 transition-colors"
+            title="Delete branch"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fillRule="evenodd"
+                d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </button>
         </div>
 
         <BranchCell

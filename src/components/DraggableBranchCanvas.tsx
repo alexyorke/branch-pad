@@ -5,6 +5,7 @@ import { useBranchPad } from "../context/BranchPadContext";
 import { DraggableCell } from "./DraggableCell";
 import { ZoomableCanvas } from "./ZoomableCanvas";
 import { Cell, TreeNode } from "../app/types";
+import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 
 interface CellPosition {
   x: number;
@@ -27,9 +28,11 @@ export function DraggableBranchCanvas() {
     buildTree,
     cellPositions,
     setCellPositions,
+    deleteCell,
   } = useBranchPad();
 
   const [connections, setConnections] = useState<Connection[]>([]);
+  const [cellToDelete, setCellToDelete] = useState<Cell | null>(null);
 
   // Initialize positions for new cells
   useEffect(() => {
@@ -110,6 +113,28 @@ export function DraggableBranchCanvas() {
       ...prev,
       [cellId]: position,
     }));
+  };
+
+  // Function to get descendant count
+  const getDescendantCount = (cellId: string): number => {
+    return cells.filter((c) => {
+      let currentParentId = c.parentId;
+      while (currentParentId) {
+        if (currentParentId === cellId) return true;
+        const parent = cells.find((p) => p.id === currentParentId);
+        if (!parent) break;
+        currentParentId = parent.parentId;
+      }
+      return false;
+    }).length;
+  };
+
+  // Handle delete confirmation
+  const handleDeleteConfirm = () => {
+    if (cellToDelete) {
+      deleteCell(cellToDelete.id);
+      setCellToDelete(null);
+    }
   };
 
   // Render connections between cells
@@ -234,11 +259,22 @@ export function DraggableBranchCanvas() {
                 isSelected={isSelected}
                 position={position}
                 onPositionChange={handlePositionChange}
+                onDelete={() => setCellToDelete(cell)}
               />
             );
           })}
         </div>
       </ZoomableCanvas>
+
+      {/* Delete confirmation dialog */}
+      {cellToDelete && (
+        <DeleteConfirmDialog
+          cell={cellToDelete}
+          descendantCount={getDescendantCount(cellToDelete.id)}
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setCellToDelete(null)}
+        />
+      )}
     </div>
   );
 }
