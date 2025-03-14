@@ -1,88 +1,178 @@
-# branch-pad
+# BranchPad
 
-branch-pad is an interactive Python notebook environment that allows you to create and explore multiple branches of code execution. Unlike traditional notebooks that follow a linear execution flow, branch-pad enables you to fork your code at any point, creating independent branches that maintain their own execution context.
-
-**Currently in beta** and this is just an MVP.
-
-<img width="1036" alt="image" src="https://github.com/user-attachments/assets/b8587e8d-d644-435d-9dd6-dec6e6feabf6" />
-
-It's also reactive--any changes to the parent causes all siblings to re-execute. Notebooks can be exported and are just Python scripts and a requirements.txt file.
-
-To install a package, just use it, e.g., "import numpy". You can find the installed version as well:
-
-<img width="453" alt="image" src="https://github.com/user-attachments/assets/a76c17e2-0b9f-4817-b10c-7f86a76a37c4" />
-<img width="526" alt="image" src="https://github.com/user-attachments/assets/ab9230e8-e0c0-4de8-9404-3a6c7333450e" />
-
+BranchPad is an interactive Python notebook environment that enables branching experimentation and hypothesis testing. It allows researchers and developers to explore multiple approaches simultaneously while maintaining a clear history of their work.
 
 ## Features
 
-- **Interactive Python Environment**: Run Python code directly in your browser using Pyodide
-- **Branch-Based Execution**: Fork any code cell to create multiple execution paths
-- **Context Preservation**: Each branch maintains its own independent execution context
-- **Real-Time Output**: See the output of your code execution immediately
-- **Visual Tree Structure**: Intuitive visualization of code branches and their relationships
-- **Persistent State**: Each branch remembers its execution state and variables
+### 1. Branch Management
 
-## How It Works
+#### Creating Branches
 
-1. **Root Cell**: Start with a root cell where you can write and execute Python code
-2. **Branching**: Use the "Branch" button to create two new independent copies of any cell
-3. **Independent Execution**: Each branch maintains its own Python environment and variables
-4. **Visual Hierarchy**: Branches are displayed in a tree structure, showing their relationships
-5. **Context Inheritance**: New branches inherit the execution context of their parent cell
+- Click the "Branch" button on any cell to create two parallel branches
+- Each branch inherits the parent's code and execution context
+- Branches are visually connected to show relationships
+- Each branch gets a unique color for easy identification
+
+#### Branch Customization
+
+- **Labels**: Give each branch a meaningful name
+- **Descriptions**: Add detailed notes about the branch's purpose
+- **Colors**: Choose from multiple color themes for visual organization
+- **Collapsible View**: Toggle branch visibility using the arrow button
+
+### 2. Code Execution
+
+#### Independent Environments
+
+- Each branch maintains its own Python execution context
+- Changes in one branch don't affect others
+- Automatic package detection and installation
+- Real-time output display
+
+#### Package Management
+
+- Click "Show Packages" to view installed packages
+- Search functionality to find specific packages
+- Automatic version tracking
+- Package state is preserved per branch
+
+### 3. Snapshotting & Versioning
+
+#### Creating Snapshots
+
+1. Click the "Create Snapshot" button on any branch
+2. Enter a label for the snapshot
+3. The snapshot captures:
+   - Code state
+   - Output
+   - Execution context
+   - Environment state
+   - Timestamp
+
+#### Managing Snapshots
+
+- View all snapshots in chronological order
+- Each snapshot shows:
+  - Label
+  - Creation timestamp
+  - Code preview
+- "Restore" button to revert to any snapshot
+- "Return to Current" to exit snapshot view
+
+### 4. Branch Comparison
+
+#### Comparing Branches
+
+1. Click "Compare Branches" to enter comparison mode
+2. Select up to two branches to compare
+3. View differences in:
+   - Code (with highlighted changes)
+   - Output
+   - Variables
+   - Execution context
+
+#### Comparison Features
+
+- Side-by-side diff view
+- Added/removed code highlighting
+- Output comparison
+- Variable state comparison
+
+### 5. Export & Deployment
+
+#### Notebook Export
+
+- Click "Export Notebook" to save the entire workspace
+- Preserves all branches and their relationships
+- Includes execution history and outputs
+
+#### Deployment Export
+
+1. Click "Export for Deployment" button
+2. Select the target branch
+3. Generates a ZIP file containing:
+   - `script.py`: Combined Python script from root to selected branch
+   - `requirements.txt`: All required packages with versions
+   - `Dockerfile`: Ready-to-use container configuration
+   - `README.md`: Setup and running instructions
+
+#### Deployment Options
+
+- **Local Execution**:
+
+  ```bash
+  pip install -r requirements.txt
+  python script.py
+  ```
+
+- **Docker Deployment**:
+  ```bash
+  docker build -t branchpad-[branch-id] .
+  docker run branchpad-[branch-id]
+  ```
+
+### 6. UI Features
+
+#### Tree View
+
+- Visual representation of branch hierarchy
+- Collapsible branches to manage complexity
+- Branch count indicators
+- Parent-child relationship lines
+
+#### Dark Mode Support
+
+- Automatic dark mode detection
+- Theme-aware UI components
+- High contrast accessibility
+
+## Getting Started
+
+1. **Initial Setup**
+
+   - The root branch is created automatically
+   - Enter your Python code in the code editor
+   - Click "Run" to execute the code
+
+2. **Creating Experiments**
+
+   - Branch from any existing cell
+   - Label your branches meaningfully
+   - Add descriptions for context
+   - Use different colors for organization
+
+3. **Managing Versions**
+   - Create snapshots at important points
+   - Use the comparison tool to track changes
+   - Export branches for deployment when ready
+
+## Best Practices
+
+1. **Branch Organization**
+
+   - Use meaningful branch labels
+   - Add detailed descriptions
+   - Choose distinct colors for different experiments
+   - Collapse unused branches to reduce clutter
+
+2. **Version Control**
+
+   - Create snapshots before major changes
+   - Use descriptive snapshot labels
+   - Compare branches to understand differences
+   - Export important versions for backup
+
+3. **Deployment**
+   - Test exported scripts locally first
+   - Verify all dependencies are captured
+   - Use Docker for consistent environments
+   - Document any special requirements
 
 ## Technical Details
 
 - Built with Next.js and React
 - Uses Pyodide for in-browser Python execution
-- Implements a tree-based data structure for managing code branches
-- Features real-time code execution and output display
-
-## Getting Started
-
-1. Clone the repository
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Run the development server:
-   ```bash
-   npm run dev
-   ```
-4. Open your browser and navigate to `http://localhost:3000`
-
-## Use Cases
-
-- **Algorithm Exploration**: Test different approaches to solving a problem
-- **Data Analysis**: Explore different data processing paths
-- **Educational Tools**: Demonstrate how different code changes affect outcomes
-- **Code Experimentation**: Safely test code modifications without losing original context
-
-## Requirements
-
-- Modern web browser with JavaScript enabled
-- Internet connection (for loading Pyodide)
-
-## Similar projects, but do not allow forking cells into different execution environments
-
-- **ipyflow**  
-  A reactive Python kernel for Jupyter that tracks cell dependencies and automatically re‐executes affected cells so that each cell’s output is always consistent with a “restart and run all” state. This focus on dataflow reactivity is similar in spirit to branch‐pad’s idea of exploring alternate execution paths.  
-  citeturn0search9
-
-- **Marimo**  
-  A relatively new take on Python notebooks, Marimo stores notebooks as regular Python files and introduces reactivity to allow changes to propagate through related code segments. Its approach to reactivity and preserving execution context resonates with branch‐pad’s branching model.
-
-- **Pluto.jl**  
-  A reactive notebook environment for the Julia language. Pluto.jl automatically tracks dependencies between cells and re‐executes them as needed—offering a live, dynamic experience that shares many conceptual similarities with branch‐pad’s reactive, non-linear execution model.
-
-- **Observable**  
-  Though built for JavaScript, Observable notebooks are fully reactive. Cells update automatically when their inputs change, enabling a dynamic, interactive experience. Its reactivity model has inspired similar ideas in other notebook ecosystems.
-
-- **Deepnote**  
-  A collaborative, cloud-based notebook platform that features real-time collaboration, interactive execution, and advanced sharing options. While it doesn’t explicitly “branch” code execution, its emphasis on an interactive, live coding environment makes it comparable.
-
-- **Nextjournal**  
-  An online notebook platform for reproducible data science that supports complex execution flows (including branching experiments) and emphasizes versioning and reproducibility.
-
-- **Datalore**  
-  JetBrains’ collaborative notebook environment which combines intelligent code assistance with interactive data visualization and reproducibility. Its design supports exploratory coding much like branch‐pad’s experimental and branchable approach.
+- Supports Python 3.9+ features
+- Real-time code execution and output
+- Automatic package management
+- Dark mode support
