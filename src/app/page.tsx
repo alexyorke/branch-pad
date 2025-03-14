@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { exportAndDownload } from "../utils/export";
+import JSZip from "jszip";
 
 declare global {
   interface Window {
@@ -177,6 +178,10 @@ export default function Home() {
   });
   const [showSnapshots, setShowSnapshots] = useState(false);
   const [selectedCellForSnapshot, setSelectedCellForSnapshot] = useState<
+    string | null
+  >(null);
+  const [showExport, setShowExport] = useState(false);
+  const [selectedCellForExport, setSelectedCellForExport] = useState<
     string | null
   >(null);
 
@@ -1017,6 +1022,140 @@ from io import StringIO
     setCells(updatedCells);
   };
 
+  // Function to get all required packages for a cell and its parents
+  const getRequiredPackages = async (cellId: string): Promise<string[]> => {
+    if (!pyodide) return [];
+
+    const cellsToCheck = getParentCells(cellId);
+    const packages = new Set<string>();
+
+    // Helper function to extract package imports
+    const extractImports = (code: string): string[] => {
+      const importRegex = /^(?:from\s+(\w+)|import\s+(\w+))/gm;
+      const imports: string[] = [];
+      let match;
+      while ((match = importRegex.exec(code)) !== null) {
+        const pkg = match[1] || match[2];
+        if (pkg && !["sys", "io"].includes(pkg)) {
+          imports.push(pkg);
+        }
+      }
+      return imports;
+    };
+
+    // Get all imports from all cells in the chain
+    for (const cell of cellsToCheck) {
+      const imports = extractImports(cell.code);
+      imports.forEach((pkg) => packages.add(pkg));
+    }
+
+    return Array.from(packages);
+  };
+
+  // Function to generate deployment files
+  const generateDeploymentFiles = async (cellId: string) => {
+    const cell = cells.find((c) => c.id === cellId);
+    if (!cell) return;
+
+    // Get all cells in the chain from root to this cell
+    const cellChain = getParentCells(cellId);
+
+    // Combine all code
+    const combinedCode = cellChain.map((c) => c.code).join("\n\n");
+
+    // Get required packages
+    const packages = await getRequiredPackages(cellId);
+
+    // Generate requirements.txt
+    const requirementsContent = packages
+      .map((pkg) => `${pkg}==latest`)
+      .join("\n");
+
+    // Generate Python script
+    const scriptContent = `#!/usr/bin/env python3
+"""
+Generated from BranchPad
+Branch: ${cell.label}
+Description: ${cell.description}
+"""
+
+import sys
+from io import StringIO
+
+${combinedCode}
+`;
+
+    // Generate Dockerfile
+    const dockerfileContent = `FROM python:3.9-slim
+
+WORKDIR /app
+
+# Copy requirements and install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the script
+COPY script.py .
+
+# Run the script
+CMD ["python", "script.py"]
+`;
+
+    // Create a zip file containing all the files
+    const zip = new JSZip();
+    zip.file("script.py", scriptContent);
+    zip.file("requirements.txt", requirementsContent);
+    zip.file("Dockerfile", dockerfileContent);
+
+    // Generate README
+    const readmeContent = `# ${cell.label} - BranchPad Export
+
+${cell.description}
+
+## Files
+- \`script.py\`: The main Python script
+- \`requirements.txt\`: Python package dependencies
+- \`Dockerfile\`: Container configuration
+
+## Running Locally
+1. Install dependencies:
+   \`\`\`
+   pip install -r requirements.txt
+   \`\`\`
+
+2. Run the script:
+   \`\`\`
+   python script.py
+   \`\`\`
+
+## Running with Docker
+1. Build the container:
+   \`\`\`
+   docker build -t branchpad-${cell.id} .
+   \`\`\`
+
+2. Run the container:
+   \`\`\`
+   docker run branchpad-${cell.id}
+   \`\`\`
+`;
+    zip.file("README.md", readmeContent);
+
+    // Download the zip file
+    const content = await zip.generateAsync({ type: "blob" });
+    const url = window.URL.createObjectURL(content);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${cell.label.toLowerCase().replace(/\s+/g, "-")}-export.zip`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+
+    setShowExport(false);
+    setSelectedCellForExport(null);
+  };
+
   return (
     <div className="min-h-screen p-8 flex flex-col items-center gap-8 font-[family-name:var(--font-geist-sans)]">
       <div className="flex items-center gap-4">
@@ -1032,12 +1171,23 @@ from io import StringIO
           {comparison.isActive ? "Exit Comparison" : "Compare Branches"}
         </button>
         <button
-          onClick={() => exportAndDownload(pyodide, cells)}
+          onClick={() => setShowExport(true)}
           disabled={loading || !pyodide}
           className={`px-4 py-2 rounded-lg font-medium text-white ${
             loading || !pyodide
               ? "bg-gray-400 cursor-not-allowed"
               : "bg-purple-500 hover:bg-purple-600"
+          }`}
+        >
+          Export for Deployment
+        </button>
+        <button
+          onClick={() => exportAndDownload(pyodide, cells)}
+          disabled={loading || !pyodide}
+          className={`px-4 py-2 rounded-lg font-medium text-white ${
+            loading || !pyodide
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-indigo-500 hover:bg-indigo-600"
           }`}
         >
           Export Notebook
@@ -1272,6 +1422,70 @@ from io import StringIO
                     </pre>
                   </div>
                 ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Export Modal */}
+      {showExport && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Export for Deployment</h2>
+              <button
+                onClick={() => {
+                  setShowExport(false);
+                  setSelectedCellForExport(null);
+                }}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-gray-600 dark:text-gray-300">
+                Select a branch to export. This will generate a ZIP file
+                containing:
+              </p>
+              <ul className="list-disc list-inside text-gray-600 dark:text-gray-300 ml-4">
+                <li>
+                  Python script with all code from root to selected branch
+                </li>
+                <li>requirements.txt with all necessary dependencies</li>
+                <li>Dockerfile for containerized deployment</li>
+                <li>README with setup and running instructions</li>
+              </ul>
+
+              <div className="mt-6 space-y-4">
+                <h3 className="font-medium">Select Branch to Export</h3>
+                <div className="grid gap-2">
+                  {cells.map((cell) => (
+                    <button
+                      key={cell.id}
+                      onClick={() => {
+                        setSelectedCellForExport(cell.id);
+                        generateDeploymentFiles(cell.id);
+                      }}
+                      className={`p-4 text-left rounded-lg border ${
+                        colorMappings[cell.color as keyof typeof colorMappings]
+                          .border
+                      } ${
+                        colorMappings[cell.color as keyof typeof colorMappings]
+                          .bg
+                      } hover:opacity-80 transition-opacity`}
+                    >
+                      <div className="font-medium">{cell.label}</div>
+                      {cell.description && (
+                        <div className="text-sm text-gray-500 mt-1">
+                          {cell.description}
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>
