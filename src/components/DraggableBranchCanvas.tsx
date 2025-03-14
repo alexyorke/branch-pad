@@ -180,15 +180,15 @@ export function DraggableBranchCanvas() {
   };
 
   return (
-    <div className="w-full h-[calc(100vh-12rem)] relative">
+    <div className="w-full h-[calc(100vh-8rem)] relative">
       <ZoomableCanvas>
         <div
           className="relative"
           style={{
             width: "100%",
             height: "100%",
-            minWidth: "3000px",
-            minHeight: "2000px",
+            minWidth: "5000px",
+            minHeight: "3000px",
           }}
         >
           {/* Render connections */}
