@@ -132,6 +132,14 @@ branch-pad is an interactive Python notebook environment that enables branching 
 - Branch count indicators
 - Parent-child relationship lines
 
+#### Canvas Controls
+
+- **Panning**: Click and drag on the empty canvas to pan the view
+- **Zooming**: Use mouse wheel or pinch gestures to zoom in and out
+- **Draggable Cells**: Reposition cells by dragging them across the canvas
+- **Cell Deletion**: Remove unwanted cells with delete confirmation dialog
+- **Increased Canvas Size**: Larger workspace for complex branch arrangements
+
 #### Dark Mode Support
 
 - Automatic dark mode detection
