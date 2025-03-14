@@ -4,7 +4,7 @@ branch-pad is an interactive Python notebook environment that enables branching 
 
 ## Demo
 
-**Live Demo**: [https://[your-username].github.io/branch-pad/](https://[your-username].github.io/branch-pad/)
+**Live Demo**: [https://alexyorke.github.io/branch-pad/](https://alexyorke.github.io/branch-pad/)
 
 <img width="1151" alt="image" src="https://github.com/user-attachments/assets/dbe26f80-969a-4fe4-b21c-8a6f1ef81d33" />
 
