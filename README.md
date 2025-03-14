@@ -26,6 +26,8 @@ branch-pad is an interactive Python notebook environment that enables branching 
 - **Colors**: Choose from multiple color themes for visual organization
 - **Collapsible View**: Toggle branch visibility using the arrow button
 
+<img width="407" alt="image" src="https://github.com/user-attachments/assets/aeb99874-0204-4253-903d-14b583661fcb" />
+
 ### 2. Code Execution
 
 #### Independent Environments
