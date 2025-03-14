@@ -1,4 +1,4 @@
-import { Cell } from '../types/notebook';
+import { Cell } from "@/types/notebook";
 
 export async function exportNotebook(pyodide: any, cells: Cell[]) {
   try {
@@ -222,47 +222,40 @@ export function downloadFile(content: string, filename: string) {
 }
 
 export async function exportAndDownload(pyodide: any, cells: Cell[]) {
-  const { pythonScript, requirements } = await exportNotebook(pyodide, cells);
-  
-  // Download the Python script
-  downloadFile(pythonScript, 'notebook_export.py');
-  
-  // Download the requirements file
-  downloadFile(requirements, 'requirements.txt');
-  
-  // Create a README with instructions
-  const readme = `# BranchPad Notebook Export
+  if (!pyodide) return;
 
-This is an exported BranchPad notebook containing all execution paths and their dependencies.
+  // Create a JSON representation of the notebook
+  const notebook = {
+    cells: cells.map((cell) => ({
+      id: cell.id,
+      code: cell.code,
+      output: cell.output,
+      error: cell.error,
+      parentId: cell.parentId,
+      label: cell.label,
+      description: cell.description,
+      color: cell.color,
+      snapshots: cell.snapshots,
+      currentSnapshotId: cell.currentSnapshotId,
+    })),
+    metadata: {
+      version: "1.0",
+      created: new Date().toISOString(),
+      pyodideVersion: pyodide.version,
+    },
+  };
 
-## Files
-- \`notebook_export.py\`: The main Python script containing all code cells and execution paths
-- \`requirements.txt\`: Python package dependencies required to run the notebook
+  // Convert to JSON string
+  const json = JSON.stringify(notebook, null, 2);
 
-## Running the Export
-
-1. Create a new virtual environment (recommended):
-   \`\`\`bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\\Scripts\\activate
-   \`\`\`
-
-2. Install dependencies:
-   \`\`\`bash
-   pip install -r requirements.txt
-   \`\`\`
-
-3. Run the notebook:
-   \`\`\`bash
-   python notebook_export.py
-   \`\`\`
-
-The script will execute all paths in the notebook sequentially, maintaining the execution context of each branch.
-
-Note: When running in a browser environment (like BranchPad), required packages will be automatically installed using micropip.
-When running the exported script locally, you should install the packages listed in requirements.txt using pip.
-`;
-
-  // Download the README
-  downloadFile(readme, 'README.md');
+  // Create a blob and download
+  const blob = new Blob([json], { type: "application/json" });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "notebook.json";
+  document.body.appendChild(a);
+  a.click();
+  window.URL.revokeObjectURL(url);
+  document.body.removeChild(a);
 } 

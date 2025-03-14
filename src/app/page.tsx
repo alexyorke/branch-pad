@@ -3,152 +3,18 @@
 import { useState, useEffect } from "react";
 import { exportAndDownload } from "../utils/export";
 import JSZip from "jszip";
-import Editor, { loader } from "@monaco-editor/react";
+import { Cell, TreeNode } from "./types";
+import { ComparisonModal } from "./components/ComparisonModal";
+import { PackagesModal } from "./components/PackagesModal";
+import { SnapshotsModal } from "./components/SnapshotsModal";
+import { ExportModal } from "./components/ExportModal";
+import { BranchCell } from "./components/BranchCell";
 
 declare global {
   interface Window {
     loadPyodide: any;
   }
 }
-
-interface Snapshot {
-  id: string;
-  timestamp: number;
-  code: string;
-  output: string;
-  error: string | null;
-  executionContext: any;
-  label: string;
-  description: string;
-  color: string;
-}
-
-interface Cell {
-  id: string;
-  code: string;
-  output: string;
-  error: string | null;
-  parentId: string | null;
-  executionContext: any;
-  label: string;
-  description: string;
-  color: string;
-  snapshots: Snapshot[];
-  currentSnapshotId: string | null;
-}
-
-interface TreeNode {
-  cell: Cell;
-  children: TreeNode[];
-}
-
-interface ComparisonState {
-  isActive: boolean;
-  selectedCells: string[];
-}
-
-// Color mappings for Tailwind classes
-const colorMappings = {
-  blue: {
-    border: "border-blue-200 dark:border-blue-800",
-    bg: "bg-blue-50 dark:bg-blue-900/10",
-    text: "text-blue-600 dark:text-blue-400",
-    button: "bg-blue-500 hover:bg-blue-600",
-    ring: "focus:ring-blue-500",
-    buttonBg: "bg-blue-500",
-    buttonRing: "ring-blue-400",
-  },
-  purple: {
-    border: "border-purple-200 dark:border-purple-800",
-    bg: "bg-purple-50 dark:bg-purple-900/10",
-    text: "text-purple-600 dark:text-purple-400",
-    button: "bg-purple-500 hover:bg-purple-600",
-    ring: "focus:ring-purple-500",
-    buttonBg: "bg-purple-500",
-    buttonRing: "ring-purple-400",
-  },
-  green: {
-    border: "border-green-200 dark:border-green-800",
-    bg: "bg-green-50 dark:bg-green-900/10",
-    text: "text-green-600 dark:text-green-400",
-    button: "bg-green-500 hover:bg-green-600",
-    ring: "focus:ring-green-500",
-    buttonBg: "bg-green-500",
-    buttonRing: "ring-green-400",
-  },
-  orange: {
-    border: "border-orange-200 dark:border-orange-800",
-    bg: "bg-orange-50 dark:bg-orange-900/10",
-    text: "text-orange-600 dark:text-orange-400",
-    button: "bg-orange-500 hover:bg-orange-600",
-    ring: "focus:ring-orange-500",
-    buttonBg: "bg-orange-500",
-    buttonRing: "ring-orange-400",
-  },
-  pink: {
-    border: "border-pink-200 dark:border-pink-800",
-    bg: "bg-pink-50 dark:bg-pink-900/10",
-    text: "text-pink-600 dark:text-pink-400",
-    button: "bg-pink-500 hover:bg-pink-600",
-    ring: "focus:ring-pink-500",
-    buttonBg: "bg-pink-500",
-    buttonRing: "ring-pink-400",
-  },
-  teal: {
-    border: "border-teal-200 dark:border-teal-800",
-    bg: "bg-teal-50 dark:bg-teal-900/10",
-    text: "text-teal-600 dark:text-teal-400",
-    button: "bg-teal-500 hover:bg-teal-600",
-    ring: "focus:ring-teal-500",
-    buttonBg: "bg-teal-500",
-    buttonRing: "ring-teal-400",
-  },
-  cyan: {
-    border: "border-cyan-200 dark:border-cyan-800",
-    bg: "bg-cyan-50 dark:bg-cyan-900/10",
-    text: "text-cyan-600 dark:text-cyan-400",
-    button: "bg-cyan-500 hover:bg-cyan-600",
-    ring: "focus:ring-cyan-500",
-    buttonBg: "bg-cyan-500",
-    buttonRing: "ring-cyan-400",
-  },
-  amber: {
-    border: "border-amber-200 dark:border-amber-800",
-    bg: "bg-amber-50 dark:bg-amber-900/10",
-    text: "text-amber-600 dark:text-amber-400",
-    button: "bg-amber-500 hover:bg-amber-600",
-    ring: "focus:ring-amber-500",
-    buttonBg: "bg-amber-500",
-    buttonRing: "ring-amber-400",
-  },
-  indigo: {
-    border: "border-indigo-200 dark:border-indigo-800",
-    bg: "bg-indigo-50 dark:bg-indigo-900/10",
-    text: "text-indigo-600 dark:text-indigo-400",
-    button: "bg-indigo-500 hover:bg-indigo-600",
-    ring: "focus:ring-indigo-500",
-    buttonBg: "bg-indigo-500",
-    buttonRing: "ring-indigo-400",
-  },
-  rose: {
-    border: "border-rose-200 dark:border-rose-800",
-    bg: "bg-rose-50 dark:bg-rose-900/10",
-    text: "text-rose-600 dark:text-rose-400",
-    button: "bg-rose-500 hover:bg-rose-600",
-    ring: "focus:ring-rose-500",
-    buttonBg: "bg-rose-500",
-    buttonRing: "ring-rose-400",
-  },
-  emerald: {
-    border: "border-emerald-200 dark:border-emerald-800",
-    bg: "bg-emerald-50 dark:bg-emerald-900/10",
-    text: "text-emerald-600 dark:text-emerald-400",
-    button: "bg-emerald-500 hover:bg-emerald-600",
-    ring: "focus:ring-emerald-500",
-    buttonBg: "bg-emerald-500",
-    buttonRing: "ring-emerald-400",
-  },
-} as const;
 
 export default function Home() {
   const [cells, setCells] = useState<Cell[]>([
@@ -173,7 +39,10 @@ export default function Home() {
   const [collapsedBranches, setCollapsedBranches] = useState<Set<string>>(
     new Set()
   );
-  const [comparison, setComparison] = useState<ComparisonState>({
+  const [comparison, setComparison] = useState<{
+    isActive: boolean;
+    selectedCells: string[];
+  }>({
     isActive: false,
     selectedCells: [],
   });
@@ -335,139 +204,6 @@ requirements
       }
     };
   }, []);
-
-  // Configure Monaco Editor with Python features
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      loader.init().then((monaco) => {
-        // Register Python language features
-        monaco.languages.register({ id: "python" });
-
-        // Configure Python language settings
-        monaco.languages.setLanguageConfiguration("python", {
-          comments: {
-            lineComment: "#",
-            blockComment: ['"""', '"""'],
-          },
-          brackets: [
-            ["{", "}"],
-            ["[", "]"],
-            ["(", ")"],
-          ],
-          autoClosingPairs: [
-            { open: "{", close: "}" },
-            { open: "[", close: "]" },
-            { open: "(", close: ")" },
-            { open: '"', close: '"', notIn: ["string"] },
-            { open: "'", close: "'", notIn: ["string", "comment"] },
-          ],
-          surroundingPairs: [
-            { open: "{", close: "}" },
-            { open: "[", close: "]" },
-            { open: "(", close: ")" },
-            { open: '"', close: '"' },
-            { open: "'", close: "'" },
-          ],
-          indentationRules: {
-            increaseIndentPattern: new RegExp(
-              "^((?!#).)*(\\:\\s*(#.*)?$|\\{[^}\"']*$|\\[[^\\]\"']*$|\\([^)\"']*$)"
-            ),
-            decreaseIndentPattern: new RegExp("^\\s*[\\}\\]\\)]"),
-          },
-        });
-
-        // Add Python snippets
-        monaco.languages.registerCompletionItemProvider("python", {
-          provideCompletionItems: (model, position) => {
-            const word = model.getWordUntilPosition(position);
-            const range = {
-              startLineNumber: position.lineNumber,
-              endLineNumber: position.lineNumber,
-              startColumn: word.startColumn,
-              endColumn: word.endColumn,
-            };
-
-            const suggestions = [
-              {
-                label: "def",
-                kind: monaco.languages.CompletionItemKind.Snippet,
-                insertText:
-                  "def ${1:function_name}(${2:parameters}):\n\t${3:pass}",
-                insertTextRules:
-                  monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-                documentation: "Define a new function",
-                range,
-              },
-              {
-                label: "class",
-                kind: monaco.languages.CompletionItemKind.Snippet,
-                insertText:
-                  "class ${1:ClassName}:\n\tdef __init__(self):\n\t\t${2:pass}",
-                insertTextRules:
-                  monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-                documentation: "Create a new class",
-                range,
-              },
-              {
-                label: "if",
-                kind: monaco.languages.CompletionItemKind.Snippet,
-                insertText: "if ${1:condition}:\n\t${2:pass}",
-                insertTextRules:
-                  monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-                documentation: "If statement",
-                range,
-              },
-              {
-                label: "for",
-                kind: monaco.languages.CompletionItemKind.Snippet,
-                insertText: "for ${1:item} in ${2:items}:\n\t${3:pass}",
-                insertTextRules:
-                  monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-                documentation: "For loop",
-                range,
-              },
-              {
-                label: "while",
-                kind: monaco.languages.CompletionItemKind.Snippet,
-                insertText: "while ${1:condition}:\n\t${2:pass}",
-                insertTextRules:
-                  monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-                documentation: "While loop",
-                range,
-              },
-              {
-                label: "try",
-                kind: monaco.languages.CompletionItemKind.Snippet,
-                insertText:
-                  "try:\n\t${1:pass}\nexcept ${2:Exception} as ${3:e}:\n\t${4:pass}",
-                insertTextRules:
-                  monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-                documentation: "Try-except block",
-                range,
-              },
-            ];
-            return { suggestions };
-          },
-        });
-      });
-    }
-  }, []);
-
-  const getRandomColor = () => {
-    const colors = [
-      "purple",
-      "green",
-      "orange",
-      "pink",
-      "teal",
-      "cyan",
-      "amber",
-      "indigo",
-      "rose",
-      "emerald",
-    ];
-    return colors[Math.floor(Math.random() * colors.length)];
-  };
 
   const forkCell = async (cellId: string) => {
     const parentCell = cells.find((cell) => cell.id === cellId);
@@ -771,308 +507,49 @@ from io import StringIO
             </>
           )}
 
-          <div
-            className={`
-            w-[32rem] space-y-4 border-2 rounded-lg p-4 relative
-            ${
-              comparison.isActive
-                ? "cursor-pointer transition-transform hover:scale-[1.02]"
-                : ""
-            }
-            ${isSelected ? "ring-2 ring-offset-2" : ""}
-            ${colorMappings[cell.color as keyof typeof colorMappings].border}
-            ${colorMappings[cell.color as keyof typeof colorMappings].bg}
-          `}
-            onClick={() => comparison.isActive && toggleCellSelection(cell.id)}
-          >
-            {/* Selection indicator */}
-            {comparison.isActive && (
-              <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 flex items-center justify-center">
-                {isSelected ? (
-                  <div className="w-4 h-4 rounded-full bg-green-500" />
-                ) : (
-                  <div className="w-4 h-4 rounded-full border-2 border-gray-300 dark:border-gray-600" />
-                )}
-              </div>
-            )}
-
-            {/* Cell header with branch info */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {hasChildren && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleBranch(cell.id);
-                      }}
-                      className={`w-5 h-5 flex items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${
-                        colorMappings[cell.color as keyof typeof colorMappings]
-                          .text
-                      }`}
-                    >
-                      {isCollapsed ? (
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 5l7 7-7 7"
-                          />
-                        </svg>
-                      ) : (
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 9l-7 7-7-7"
-                          />
-                        </svg>
-                      )}
-                    </button>
-                  )}
-                  <input
-                    type="text"
-                    value={cell.label}
-                    onChange={(e) => {
-                      e.stopPropagation();
-                      const updatedCells = cells.map((c) =>
-                        c.id === cell.id ? { ...c, label: e.target.value } : c
-                      );
-                      setCells(updatedCells);
-                    }}
-                    className={`text-sm font-medium bg-transparent border-none focus:outline-none focus:ring-2 ${
-                      colorMappings[cell.color as keyof typeof colorMappings]
-                        .ring
-                    } rounded px-1 ${
-                      colorMappings[cell.color as keyof typeof colorMappings]
-                        .text
-                    }`}
-                    placeholder="Enter branch name..."
-                  />
-                  {cell.parentId && (
-                    <span className="text-xs text-gray-500">
-                      (from {cell.parentId})
-                    </span>
-                  )}
-                </div>
-                {hasChildren && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500">
-                      {children.length} branch{children.length > 1 ? "es" : ""}
-                      {isCollapsed ? " (collapsed)" : ""}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Branch description */}
-              <textarea
-                value={cell.description}
-                onChange={(e) => {
-                  e.stopPropagation();
-                  const updatedCells = cells.map((c) =>
-                    c.id === cell.id ? { ...c, description: e.target.value } : c
-                  );
-                  setCells(updatedCells);
-                }}
-                placeholder="Add branch description..."
-                className={`w-full px-3 py-2 text-sm bg-white/50 dark:bg-gray-900/50 border ${
-                  colorMappings[cell.color as keyof typeof colorMappings].border
-                } rounded-lg focus:outline-none focus:ring-2 ${
-                  colorMappings[cell.color as keyof typeof colorMappings].ring
-                }`}
-                rows={2}
-              />
-
-              {/* Color selector */}
-              <div
-                className="flex items-center gap-2"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <span className="text-xs text-gray-500">Branch color:</span>
-                <div className="flex gap-1">
-                  {Object.keys(colorMappings).map((color) => (
-                    <button
-                      key={color}
-                      onClick={() => {
-                        const updatedCells = cells.map((c) =>
-                          c.id === cell.id ? { ...c, color } : c
-                        );
-                        setCells(updatedCells);
-                      }}
-                      className={`w-4 h-4 rounded-full ${
-                        colorMappings[color as keyof typeof colorMappings]
-                          .buttonBg
-                      } hover:ring-2 ${cell.color === color ? "ring-2" : ""} ${
-                        colorMappings[color as keyof typeof colorMappings]
-                          .buttonRing
-                      }`}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="h-48 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-              <Editor
-                height="100%"
-                defaultLanguage="python"
-                theme={
-                  typeof window !== "undefined" &&
-                  window.matchMedia("(prefers-color-scheme: dark)").matches
-                    ? "vs-dark"
-                    : "light"
-                }
-                value={cell.code}
-                onChange={(value) => {
-                  if (value !== undefined) {
-                    const updatedCells = cells.map((c) =>
-                      c.id === cell.id ? { ...c, code: value } : c
-                    );
-                    setCells(updatedCells);
-                  }
-                }}
-                options={{
-                  minimap: { enabled: false },
-                  scrollBeyondLastLine: false,
-                  fontSize: 14,
-                  lineNumbers: "on",
-                  renderLineHighlight: "all",
-                  automaticLayout: true,
-                  tabSize: 4,
-                  wordWrap: "on",
-                  suggest: {
-                    showKeywords: true,
-                    showSnippets: true,
-                    preview: true,
-                    snippetsPreventQuickSuggestions: false,
-                  },
-                  quickSuggestions: {
-                    other: true,
-                    comments: true,
-                    strings: true,
-                  },
-                  acceptSuggestionOnEnter: "on",
-                  tabCompletion: "on",
-                  formatOnType: true,
-                  formatOnPaste: true,
-                  bracketPairColorization: {
-                    enabled: true,
-                  },
-                  autoIndent: "full",
-                  detectIndentation: true,
-                }}
-                onMount={(editor, monaco) => {
-                  // Add custom keybinding for code formatting
-                  editor.addCommand(
-                    monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyF,
-                    () => {
-                      editor.getAction("editor.action.formatDocument").run();
-                    }
-                  );
-                }}
-              />
-            </div>
-
-            <div
-              className="flex justify-end gap-2"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                onClick={() => {
-                  setSelectedCellForSnapshot(cell.id);
-                  setShowSnapshots(true);
-                }}
-                disabled={loading || !pyodide}
-                className={`px-4 py-2 rounded-lg font-medium text-white ${
-                  loading || !pyodide
-                    ? "bg-gray-400 cursor-not-allowed"
-                    : colorMappings[cell.color as keyof typeof colorMappings]
-                        .button
-                }`}
-              >
-                {cell.snapshots.length > 0
-                  ? `Snapshots (${cell.snapshots.length})`
-                  : "Create Snapshot"}
-              </button>
-              <button
-                onClick={() => forkCell(cell.id)}
-                disabled={loading || !pyodide}
-                className={`px-4 py-2 rounded-lg font-medium text-white ${
-                  loading || !pyodide
-                    ? "bg-gray-400 cursor-not-allowed"
-                    : colorMappings[cell.color as keyof typeof colorMappings]
-                        .button
-                }`}
-              >
-                Branch
-              </button>
-
-              <button
-                onClick={() => runCode(cell.id)}
-                disabled={loading || !pyodide}
-                className={`px-4 py-2 rounded-lg font-medium text-white ${
-                  loading || !pyodide
-                    ? "bg-gray-400 cursor-not-allowed"
-                    : colorMappings[cell.color as keyof typeof colorMappings]
-                        .button
-                }`}
-              >
-                {loading ? "Loading Python..." : "Run"}
-              </button>
-            </div>
-
-            {cell.error && (
-              <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                <pre className="text-red-600 dark:text-red-400 text-sm whitespace-pre-wrap font-mono">
-                  {cell.error}
-                </pre>
-              </div>
-            )}
-
-            {cell.output && (
-              <div className="p-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg">
-                <h2 className="text-sm font-semibold mb-2">Output:</h2>
-                <pre className="text-sm whitespace-pre-wrap font-mono">
-                  {cell.output}
-                </pre>
-              </div>
-            )}
-
-            {/* Snapshot indicator */}
-            {cell.currentSnapshotId && (
-              <div className="mt-2 text-sm text-gray-500">
-                Currently viewing snapshot:{" "}
-                {
-                  cell.snapshots.find((s) => s.id === cell.currentSnapshotId)
-                    ?.label
-                }
-                <button
-                  onClick={() => {
-                    const updatedCells = cells.map((c) =>
-                      c.id === cell.id ? { ...c, currentSnapshotId: null } : c
-                    );
-                    setCells(updatedCells);
-                  }}
-                  className="ml-2 text-blue-500 hover:text-blue-600"
-                >
-                  Return to Current
-                </button>
-              </div>
-            )}
-          </div>
+          <BranchCell
+            cell={cell}
+            isRoot={isRoot}
+            hasChildren={hasChildren}
+            childrenCount={children.length}
+            isCollapsed={isCollapsed}
+            isSelected={isSelected}
+            isComparisonMode={comparison.isActive}
+            loading={loading}
+            pyodide={pyodide}
+            onToggleBranch={toggleBranch}
+            onLabelChange={(cellId, label) => {
+              const updatedCells = cells.map((c) =>
+                c.id === cellId ? { ...c, label } : c
+              );
+              setCells(updatedCells);
+            }}
+            onDescriptionChange={(cellId, description) => {
+              const updatedCells = cells.map((c) =>
+                c.id === cellId ? { ...c, description } : c
+              );
+              setCells(updatedCells);
+            }}
+            onColorChange={(cellId, color) => {
+              const updatedCells = cells.map((c) =>
+                c.id === cellId ? { ...c, color } : c
+              );
+              setCells(updatedCells);
+            }}
+            onCodeChange={(cellId, code) => {
+              const updatedCells = cells.map((c) =>
+                c.id === cellId ? { ...c, code } : c
+              );
+              setCells(updatedCells);
+            }}
+            onShowSnapshots={(cellId) => {
+              setSelectedCellForSnapshot(cellId);
+              setShowSnapshots(true);
+            }}
+            onForkCell={forkCell}
+            onRunCode={runCode}
+            onCellSelect={toggleCellSelection}
+          />
         </div>
 
         {/* Render children */}
@@ -1085,69 +562,12 @@ from io import StringIO
     );
   };
 
-  // Function to compute diff between two strings
-  const computeDiff = (
-    str1: string,
-    str2: string
-  ): { added: string[]; removed: string[]; unchanged: string[] } => {
-    const lines1 = str1.split("\n");
-    const lines2 = str2.split("\n");
-    const added: string[] = [];
-    const removed: string[] = [];
-    const unchanged: string[] = [];
-
-    const lcs = (a: string[], b: string[]): number[][] => {
-      const m = a.length;
-      const n = b.length;
-      const dp: number[][] = Array(m + 1)
-        .fill(0)
-        .map(() => Array(n + 1).fill(0));
-
-      for (let i = 1; i <= m; i++) {
-        for (let j = 1; j <= n; j++) {
-          if (a[i - 1] === b[j - 1]) {
-            dp[i][j] = dp[i - 1][j - 1] + 1;
-          } else {
-            dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
-          }
-        }
-      }
-      return dp;
-    };
-
-    const backtrack = (
-      dp: number[][],
-      a: string[],
-      b: string[],
-      i: number,
-      j: number
-    ) => {
-      if (i === 0 || j === 0) return;
-
-      if (a[i - 1] === b[j - 1]) {
-        unchanged.unshift(a[i - 1]);
-        backtrack(dp, a, b, i - 1, j - 1);
-      } else if ((dp[i - 1] ?? [])[j] > (dp[i] ?? [])[j - 1]) {
-        removed.unshift(a[i - 1]);
-        backtrack(dp, a, b, i - 1, j);
-      } else {
-        added.unshift(b[j - 1]);
-        backtrack(dp, a, b, i, j - 1);
-      }
-    };
-
-    const dp = lcs(lines1, lines2);
-    backtrack(dp, lines1, lines2, lines1.length, lines2.length);
-
-    return { added, removed, unchanged };
-  };
-
   // Function to create a snapshot of a cell
   const createSnapshot = (cellId: string, snapshotLabel: string) => {
     const cell = cells.find((c) => c.id === cellId);
     if (!cell) return;
 
-    const snapshot: Snapshot = {
+    const snapshot = {
       id: `snapshot-${Date.now()}`,
       timestamp: Date.now(),
       code: cell.code,
@@ -1322,6 +742,22 @@ ${cell.description}
     setSelectedCellForExport(null);
   };
 
+  const getRandomColor = () => {
+    const colors = [
+      "purple",
+      "green",
+      "orange",
+      "pink",
+      "teal",
+      "cyan",
+      "amber",
+      "indigo",
+      "rose",
+      "emerald",
+    ];
+    return colors[Math.floor(Math.random() * colors.length)];
+  };
+
   return (
     <div className="min-h-screen p-8 flex flex-col items-center gap-8 font-[family-name:var(--font-geist-sans)]">
       <div className="flex items-center gap-4">
@@ -1371,290 +807,47 @@ ${cell.description}
         </button>
       </div>
 
-      {/* Comparison View */}
+      {/* Comparison Modal */}
       {comparison.isActive && comparison.selectedCells.length === 2 && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-[90vw] h-[90vh] flex flex-col">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Branch Comparison</h2>
-              <button
-                onClick={toggleComparisonMode}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="flex-1 flex gap-4 min-h-0">
-              {comparison.selectedCells.map((cellId, index) => {
-                const cell = cells.find((c) => c.id === cellId)!;
-                const otherCell = cells.find(
-                  (c) => c.id === comparison.selectedCells[1 - index]
-                )!;
-                const diff = computeDiff(cell.code, otherCell.code);
-
-                return (
-                  <div key={cellId} className="flex-1 flex flex-col min-h-0">
-                    <div className="bg-gray-100 dark:bg-gray-900 p-4 rounded-t-lg">
-                      <h3
-                        className={`font-medium ${
-                          colorMappings[
-                            cell.color as keyof typeof colorMappings
-                          ].text
-                        }`}
-                      >
-                        {cell.label}
-                      </h3>
-                      <p className="text-sm text-gray-500">
-                        {cell.description}
-                      </p>
-                    </div>
-
-                    <div className="flex-1 flex flex-col gap-4 overflow-y-auto p-4 border-x border-gray-200 dark:border-gray-700">
-                      {/* Code Comparison */}
-                      <div className="space-y-2">
-                        <h4 className="font-medium">Code</h4>
-                        <pre className="font-mono text-sm whitespace-pre-wrap bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
-                          {cell.code.split("\n").map((line, i) => {
-                            const isAdded = diff.added.includes(line);
-                            const isRemoved = diff.removed.includes(line);
-                            return (
-                              <div
-                                key={i}
-                                className={`${
-                                  isAdded
-                                    ? "bg-green-100 dark:bg-green-900/20"
-                                    : isRemoved
-                                    ? "bg-red-100 dark:bg-red-900/20"
-                                    : ""
-                                }`}
-                              >
-                                {line}
-                              </div>
-                            );
-                          })}
-                        </pre>
-                      </div>
-
-                      {/* Output Comparison */}
-                      <div className="space-y-2">
-                        <h4 className="font-medium">Output</h4>
-                        <pre className="font-mono text-sm whitespace-pre-wrap bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
-                          {cell.output || "No output"}
-                        </pre>
-                      </div>
-
-                      {/* Variables Comparison */}
-                      {cell.executionContext && (
-                        <div className="space-y-2">
-                          <h4 className="font-medium">Variables</h4>
-                          <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
-                            <pre className="font-mono text-sm whitespace-pre-wrap">
-                              {JSON.stringify(cell.executionContext, null, 2)}
-                            </pre>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+        <ComparisonModal
+          selectedCells={comparison.selectedCells}
+          cells={cells}
+          onClose={toggleComparisonMode}
+        />
       )}
 
       {/* Package Modal */}
       {showPackages && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Installed Packages</h2>
-              <button
-                onClick={() => setShowPackages(false)}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="space-y-2">
-              <input
-                type="text"
-                placeholder="Search packages..."
-                className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 dark:bg-gray-900"
-                onChange={(e) => {
-                  const searchTerm = e.target.value.toLowerCase();
-                  const filteredPackages = packageList.filter((pkg) =>
-                    pkg.toLowerCase().includes(searchTerm)
-                  );
-                  setPackageList(filteredPackages);
-                }}
-              />
-              <div className="mt-4 space-y-1">
-                {packageList.map((pkg, index) => (
-                  <div
-                    key={index}
-                    className="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-900 rounded"
-                  >
-                    <code className="font-mono text-sm">{pkg}</code>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
+        <PackagesModal
+          packageList={packageList}
+          onClose={() => setShowPackages(false)}
+        />
       )}
 
       {/* Snapshots Modal */}
       {showSnapshots && selectedCellForSnapshot && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Branch Snapshots</h2>
-              <button
-                onClick={() => {
-                  setShowSnapshots(false);
-                  setSelectedCellForSnapshot(null);
-                }}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Create new snapshot */}
-            <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-              <h3 className="font-medium mb-2">Create New Snapshot</h3>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Snapshot label"
-                  className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  id="snapshotLabel"
-                />
-                <button
-                  onClick={() => {
-                    const label = (
-                      document.getElementById(
-                        "snapshotLabel"
-                      ) as HTMLInputElement
-                    ).value;
-                    if (label && selectedCellForSnapshot) {
-                      createSnapshot(selectedCellForSnapshot, label);
-                      (
-                        document.getElementById(
-                          "snapshotLabel"
-                        ) as HTMLInputElement
-                      ).value = "";
-                    }
-                  }}
-                  className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg"
-                >
-                  Create Snapshot
-                </button>
-              </div>
-            </div>
-
-            {/* Snapshot timeline */}
-            <div className="space-y-4">
-              <h3 className="font-medium">Snapshot Timeline</h3>
-              {cells
-                .find((c) => c.id === selectedCellForSnapshot)
-                ?.snapshots.map((snapshot) => (
-                  <div
-                    key={snapshot.id}
-                    className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700"
-                  >
-                    <div className="flex justify-between items-center mb-2">
-                      <div>
-                        <h4 className="font-medium">{snapshot.label}</h4>
-                        <p className="text-sm text-gray-500">
-                          {new Date(snapshot.timestamp).toLocaleString()}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => {
-                          restoreSnapshot(selectedCellForSnapshot, snapshot.id);
-                          setShowSnapshots(false);
-                          setSelectedCellForSnapshot(null);
-                        }}
-                        className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded-lg"
-                      >
-                        Restore
-                      </button>
-                    </div>
-                    <pre className="text-sm bg-white dark:bg-gray-800 p-2 rounded mt-2 max-h-32 overflow-y-auto">
-                      {snapshot.code}
-                    </pre>
-                  </div>
-                ))}
-            </div>
-          </div>
-        </div>
+        <SnapshotsModal
+          selectedCellId={selectedCellForSnapshot}
+          cells={cells}
+          onClose={() => {
+            setShowSnapshots(false);
+            setSelectedCellForSnapshot(null);
+          }}
+          onCreateSnapshot={createSnapshot}
+          onRestoreSnapshot={restoreSnapshot}
+        />
       )}
 
       {/* Export Modal */}
       {showExport && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Export for Deployment</h2>
-              <button
-                onClick={() => {
-                  setShowExport(false);
-                  setSelectedCellForExport(null);
-                }}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <p className="text-gray-600 dark:text-gray-300">
-                Select a branch to export. This will generate a ZIP file
-                containing:
-              </p>
-              <ul className="list-disc list-inside text-gray-600 dark:text-gray-300 ml-4">
-                <li>
-                  Python script with all code from root to selected branch
-                </li>
-                <li>requirements.txt with all necessary dependencies</li>
-                <li>Dockerfile for containerized deployment</li>
-                <li>README with setup and running instructions</li>
-              </ul>
-
-              <div className="mt-6 space-y-4">
-                <h3 className="font-medium">Select Branch to Export</h3>
-                <div className="grid gap-2">
-                  {cells.map((cell) => (
-                    <button
-                      key={cell.id}
-                      onClick={() => {
-                        setSelectedCellForExport(cell.id);
-                        generateDeploymentFiles(cell.id);
-                      }}
-                      className={`p-4 text-left rounded-lg border ${
-                        colorMappings[cell.color as keyof typeof colorMappings]
-                          .border
-                      } ${
-                        colorMappings[cell.color as keyof typeof colorMappings]
-                          .bg
-                      } hover:opacity-80 transition-opacity`}
-                    >
-                      <div className="font-medium">{cell.label}</div>
-                      {cell.description && (
-                        <div className="text-sm text-gray-500 mt-1">
-                          {cell.description}
-                        </div>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <ExportModal
+          cells={cells}
+          onClose={() => {
+            setShowExport(false);
+            setSelectedCellForExport(null);
+          }}
+          onExport={generateDeploymentFiles}
+        />
       )}
 
       <div className="w-full overflow-x-auto">
