@@ -465,7 +465,7 @@ from io import StringIO
 
   return (
     <div className="min-h-screen p-8 flex flex-col items-center gap-8 font-[family-name:var(--font-geist-sans)]">
-      <h1 className="text-2xl font-bold text-center">Python Code Input</h1>
+      <h1 className="text-2xl font-bold text-center">BranchPad</h1>
 
       <div className="w-full overflow-x-auto">
         <div className="min-w-[90rem] px-8 mx-auto">
