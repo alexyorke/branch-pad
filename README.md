@@ -184,3 +184,39 @@ branch-pad is an interactive Python notebook environment that enables branching 
 - Real-time code execution and output
 - Automatic package management
 - Dark mode support
+
+## Deployment
+
+### GitHub Pages
+
+This project is configured for easy deployment to GitHub Pages. Here's how to deploy:
+
+1. **Push to GitHub**: Push your code to a GitHub repository.
+
+2. **Enable GitHub Pages**:
+
+   - Go to your repository on GitHub
+   - Navigate to Settings > Pages
+   - Under "Build and deployment", select "GitHub Actions" as the source
+
+3. **Automatic Deployment**:
+
+   - The included GitHub Actions workflow will automatically build and deploy your site when you push to the main branch
+   - Your site will be available at `https://[your-username].github.io/[repository-name]/`
+
+4. **Local Testing**:
+   - Run `./run.ps1` to build the project with the correct base path
+   - Use a static file server to test the output: `npx serve out`
+
+### Configuration Details
+
+The deployment setup includes:
+
+- Static export configuration in `next.config.ts`
+- Automatic base path detection for GitHub Pages
+- GitHub Actions workflow for CI/CD
+
+If you need to customize the deployment, you can modify:
+
+- `.github/workflows/deploy.yml` for CI/CD settings
+- `next.config.ts` for Next.js export options
