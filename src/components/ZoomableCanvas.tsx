@@ -95,6 +95,11 @@ export function ZoomableCanvas({ children }: ZoomableCanvasProps) {
       onMouseLeave={handleMouseUp}
       style={{ cursor: isDragging ? "grabbing" : "default" }}
     >
+      {/* Pan hint text */}
+      <div className="absolute top-4 left-4 bg-background/80 backdrop-blur-sm px-3 py-1.5 rounded-lg text-sm text-secondary-foreground/80 border border-border select-none">
+        Pan: Middle mouse button or Alt + Click
+      </div>
+
       <div
         className="absolute transition-transform duration-100 ease-out"
         style={{

@@ -80,6 +80,16 @@ export function KeyboardShortcutsHelp({ onClose }: KeyboardShortcutsHelpProps) {
           />
 
           <h3 className="font-medium text-gray-700 dark:text-gray-200 mt-6 mb-2">
+            Canvas Controls
+          </h3>
+          <Shortcut keys={["Middle Mouse"]} description="Pan the canvas" />
+          <Shortcut
+            keys={["Alt", "Click + Drag"]}
+            description="Alternative way to pan the canvas"
+          />
+          <Shortcut keys={["R"]} description="Reset canvas zoom and position" />
+
+          <h3 className="font-medium text-gray-700 dark:text-gray-200 mt-6 mb-2">
             Editor
           </h3>
           <Shortcut keys={["Ctrl", "F"]} description="Format code" />
