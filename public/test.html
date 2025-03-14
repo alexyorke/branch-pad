@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Asset Loading Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .test-box {
+        background-color: #f0f0f0;
+        border: 1px solid #ddd;
+        padding: 20px;
+        margin-bottom: 20px;
+      }
+      .success {
+        color: green;
+        font-weight: bold;
+      }
+      .error {
+        color: red;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Asset Loading Test</h1>
+    <div class="test-box">
+      <h2>Base Path Test</h2>
+      <p>Current base path: <span id="base-path">Checking...</span></p>
+    </div>
+    <div class="test-box">
+      <h2>Asset Loading Test</h2>
+      <p>Status: <span id="asset-status">Checking...</span></p>
+    </div>
+
+    <script>
+      // Display the base path
+      document.getElementById("base-path").textContent =
+        window.location.pathname;
+
+      // Check if we can load a test asset
+      const img = new Image();
+      img.onload = function () {
+        document.getElementById("asset-status").textContent =
+          "Success! Assets are loading correctly.";
+        document.getElementById("asset-status").className = "success";
+      };
+      img.onerror = function () {
+        document.getElementById("asset-status").textContent =
+          "Error! Assets are not loading correctly.";
+        document.getElementById("asset-status").className = "error";
+      };
+      img.src = window.location.pathname + "test-asset.png";
+
+      // Log some debug information
+      console.log("Page URL:", window.location.href);
+      console.log("Page Path:", window.location.pathname);
+      console.log("Testing asset URL:", img.src);
+    </script>
+  </body>
+</html>

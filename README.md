@@ -2,6 +2,10 @@
 
 branch-pad is an interactive Python notebook environment that enables branching experimentation and hypothesis testing. It allows researchers and developers to explore multiple approaches simultaneously while maintaining a clear history of their work.
 
+## Demo
+
+**Live Demo**: [https://[your-username].github.io/branch-pad/](https://[your-username].github.io/branch-pad/)
+
 <img width="1151" alt="image" src="https://github.com/user-attachments/assets/dbe26f80-969a-4fe4-b21c-8a6f1ef81d33" />
 
 <img width="849" alt="image" src="https://github.com/user-attachments/assets/22dc6596-a06b-4b7d-bf74-29a498645af3" />
@@ -201,12 +205,34 @@ This project is configured for easy deployment to GitHub Pages. Here's how to de
 
 3. **Automatic Deployment**:
 
-   - The included GitHub Actions workflow will automatically build and deploy your site when you push to the main branch
+   - The included GitHub Actions workflow will automatically build and deploy your site when you push to any branch
    - Your site will be available at `https://[your-username].github.io/[repository-name]/`
 
-4. **Local Testing**:
+4. **Demo Link**:
+
+   - Once deployed, your project will be accessible at: [https://[your-username].github.io/branch-pad/](https://[your-username].github.io/branch-pad/)
+   - You can replace `[your-username]` with your actual GitHub username in this README
+   - This link can be shared with others to showcase your project
+
+5. **Local Testing**:
    - Run `./run.ps1` to build the project with the correct base path
    - Use a static file server to test the output: `npx serve out`
+   - Or use the provided test script: `./test-deploy.ps1`
+
+### Troubleshooting Deployment
+
+If your deployed site appears corrupted (HTML loads but CSS/JS doesn't):
+
+1. **Check Asset Paths**: Make sure all assets are referenced with the correct base path. The configuration in `next.config.ts` includes:
+
+   - `output: 'export'` - Enables static HTML export
+   - `basePath` - Sets the base URL path for your site
+   - `assetPrefix` - Ensures assets are loaded with the correct path
+   - `trailingSlash: true` - Ensures consistent URL handling
+
+2. **Test Locally**: Use the `test-deploy.ps1` script to test your deployment locally before pushing to GitHub.
+
+3. **Clear Cache**: If you're still seeing issues after deployment, try clearing your browser cache or testing in an incognito window.
 
 ### Configuration Details
 

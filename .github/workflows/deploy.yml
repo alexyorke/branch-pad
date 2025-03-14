@@ -34,13 +34,39 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
+      - name: Update Demo Link
+        run: |
+          # Get the GitHub username from the repository URL
+          GITHUB_USERNAME=$(echo $GITHUB_REPOSITORY | cut -d '/' -f 1)
+          echo "Detected GitHub username: $GITHUB_USERNAME"
+
+          # Update the README with the actual username
+          sed -i "s/\[your-username\]/$GITHUB_USERNAME/g" README.md
+
+          echo "README.md updated with the correct demo link: https://$GITHUB_USERNAME.github.io/branch-pad/"
+
       - name: Build with Next.js
         run: |
           # Get repository name for basePath
           REPO_NAME=$(echo $GITHUB_REPOSITORY | cut -d '/' -f 2)
           # Set the base path for GitHub Pages
           echo "NEXT_PUBLIC_BASE_PATH=/$REPO_NAME" >> $GITHUB_ENV
+
+          # Make sure the environment variable is available during build
+          export NEXT_PUBLIC_BASE_PATH="/$REPO_NAME"
+
+          # Debug information
+          echo "Building with base path: $NEXT_PUBLIC_BASE_PATH"
+
+          # Clean any previous builds
+          rm -rf .next out
+
+          # Build the project
           npm run build
+
+          # Verify the output directory
+          echo "Listing files in the out directory:"
+          ls -la out/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

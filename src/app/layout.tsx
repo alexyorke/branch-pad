@@ -13,12 +13,15 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// Get the base path from the environment variable
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
 export const metadata: Metadata = {
   title: "BranchPad | Computational Notebook with Branching",
   description:
     "A powerful computational notebook with branching capabilities for data science and machine learning workflows",
   icons: {
-    icon: "/favicon.ico",
+    icon: `${basePath}/favicon.ico`,
   },
 };
 
@@ -32,6 +35,8 @@ export default function RootLayout({
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <meta name="color-scheme" content="light dark" />
+        {/* Add base tag to ensure all relative URLs are resolved correctly */}
+        <base href={basePath || "/"} />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}

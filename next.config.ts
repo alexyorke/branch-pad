@@ -9,6 +9,10 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
+  // Ensure assets are loaded with the correct path
+  assetPrefix: process.env.NEXT_PUBLIC_BASE_PATH || '',
+  // Ensure trailing slashes are handled consistently
+  trailingSlash: true,
 };
 
 export default nextConfig;
