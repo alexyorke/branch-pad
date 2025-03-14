@@ -4,6 +4,10 @@ BranchPad is an interactive Python notebook environment that enables branching e
 
 <img width="1151" alt="image" src="https://github.com/user-attachments/assets/dbe26f80-969a-4fe4-b21c-8a6f1ef81d33" />
 
+<img width="849" alt="image" src="https://github.com/user-attachments/assets/22dc6596-a06b-4b7d-bf74-29a498645af3" />
+
+<img width="530" alt="image" src="https://github.com/user-attachments/assets/f6df5324-7ef9-4d3d-b34d-19677dccc978" />
+
 ## Features
 
 ### 1. Branch Management
