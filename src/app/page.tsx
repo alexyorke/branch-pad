@@ -16,6 +16,9 @@ interface Cell {
   error: string | null;
   parentId: string | null;
   executionContext: any;
+  label: string;
+  description: string;
+  color: string;
 }
 
 interface TreeNode {
@@ -32,6 +35,9 @@ export default function Home() {
       error: null,
       parentId: null,
       executionContext: null,
+      label: "Root",
+      description: "",
+      color: "blue",
     },
   ]);
   const [loading, setLoading] = useState(false);
@@ -153,6 +159,22 @@ requirements
     };
   }, []);
 
+  const getRandomColor = () => {
+    const colors = [
+      "purple",
+      "green",
+      "orange",
+      "pink",
+      "teal",
+      "cyan",
+      "amber",
+      "indigo",
+      "rose",
+      "emerald",
+    ];
+    return colors[Math.floor(Math.random() * colors.length)];
+  };
+
   const forkCell = async (cellId: string) => {
     const parentCell = cells.find((cell) => cell.id === cellId);
     if (!parentCell || !pyodide) return;
@@ -191,6 +213,9 @@ from io import StringIO
           error: null,
           parentId: cellId,
           executionContext: namespace,
+          label: `Branch A from ${parentCell.label}`,
+          description: "",
+          color: getRandomColor(),
         };
       })(),
       // Create second branch with its own independent context
@@ -225,6 +250,9 @@ from io import StringIO
           error: null,
           parentId: cellId,
           executionContext: namespace,
+          label: `Branch B from ${parentCell.label}`,
+          description: "",
+          color: getRandomColor(),
         };
       })(),
     ]);
@@ -448,33 +476,91 @@ from io import StringIO
             ${
               isRoot
                 ? "border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/10"
-                : "border-gray-200 dark:border-gray-700"
+                : `border-${cell.color}-200 dark:border-${cell.color}-800 bg-${cell.color}-50 dark:bg-${cell.color}-900/10`
             }
           `}
           >
-            {/* Cell header with branch count */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span
-                  className={`text-sm font-medium ${
-                    isRoot
-                      ? "text-blue-600 dark:text-blue-400"
-                      : "text-gray-600 dark:text-gray-400"
-                  }`}
-                >
-                  {isRoot ? "Root" : "Branch"}
-                </span>
-                {cell.parentId && (
+            {/* Cell header with branch info */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={cell.label}
+                    onChange={(e) => {
+                      const updatedCells = cells.map((c) =>
+                        c.id === cell.id ? { ...c, label: e.target.value } : c
+                      );
+                      setCells(updatedCells);
+                    }}
+                    className={`text-sm font-medium bg-transparent border-none focus:outline-none focus:ring-2 focus:ring-${
+                      cell.color
+                    }-500 rounded px-1 ${
+                      isRoot
+                        ? "text-blue-600 dark:text-blue-400"
+                        : `text-${cell.color}-600 dark:text-${cell.color}-400`
+                    }`}
+                    placeholder="Enter branch name..."
+                  />
+                  {cell.parentId && (
+                    <span className="text-xs text-gray-500">
+                      (from {cell.parentId})
+                    </span>
+                  )}
+                </div>
+                {children.length > 0 && (
                   <span className="text-xs text-gray-500">
-                    (from {cell.parentId})
+                    {children.length} branch{children.length > 1 ? "es" : ""}
                   </span>
                 )}
               </div>
-              {children.length > 0 && (
-                <span className="text-xs text-gray-500">
-                  {children.length} branch{children.length > 1 ? "es" : ""}
-                </span>
-              )}
+
+              {/* Branch description */}
+              <textarea
+                value={cell.description}
+                onChange={(e) => {
+                  const updatedCells = cells.map((c) =>
+                    c.id === cell.id ? { ...c, description: e.target.value } : c
+                  );
+                  setCells(updatedCells);
+                }}
+                placeholder="Add branch description..."
+                className={`w-full px-3 py-2 text-sm bg-white/50 dark:bg-gray-900/50 border border-${cell.color}-200 dark:border-${cell.color}-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-${cell.color}-500`}
+                rows={2}
+              />
+
+              {/* Color selector */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500">Branch color:</span>
+                <div className="flex gap-1">
+                  {[
+                    "blue",
+                    "purple",
+                    "green",
+                    "orange",
+                    "pink",
+                    "teal",
+                    "cyan",
+                    "amber",
+                    "indigo",
+                    "rose",
+                    "emerald",
+                  ].map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => {
+                        const updatedCells = cells.map((c) =>
+                          c.id === cell.id ? { ...c, color } : c
+                        );
+                        setCells(updatedCells);
+                      }}
+                      className={`w-4 h-4 rounded-full bg-${color}-500 hover:ring-2 hover:ring-${color}-400 ${
+                        cell.color === color ? `ring-2 ring-${color}-400` : ""
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
 
             <textarea
