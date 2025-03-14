@@ -6,7 +6,7 @@ branch-pad is an interactive Python notebook environment that allows you to crea
 
 <img width="1327" alt="image" src="https://github.com/user-attachments/assets/06fff971-3655-4c57-bffe-04753a81c288" />
 
-It's also reactive--any changes to the parent causes all siblings to re-execute.
+It's also reactive--any changes to the parent causes all siblings to re-execute. Notebooks can be exported and are just Python scripts and a requirements.txt file.
 
 ## Features
 
