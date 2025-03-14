@@ -9,6 +9,18 @@ declare global {
   }
 }
 
+interface Snapshot {
+  id: string;
+  timestamp: number;
+  code: string;
+  output: string;
+  error: string | null;
+  executionContext: any;
+  label: string;
+  description: string;
+  color: string;
+}
+
 interface Cell {
   id: string;
   code: string;
@@ -19,6 +31,8 @@ interface Cell {
   label: string;
   description: string;
   color: string;
+  snapshots: Snapshot[];
+  currentSnapshotId: string | null;
 }
 
 interface TreeNode {
@@ -146,6 +160,8 @@ export default function Home() {
       label: "Root",
       description: "",
       color: "blue",
+      snapshots: [],
+      currentSnapshotId: null,
     },
   ]);
   const [loading, setLoading] = useState(false);
@@ -159,6 +175,10 @@ export default function Home() {
     isActive: false,
     selectedCells: [],
   });
+  const [showSnapshots, setShowSnapshots] = useState(false);
+  const [selectedCellForSnapshot, setSelectedCellForSnapshot] = useState<
+    string | null
+  >(null);
 
   const toggleBranch = (cellId: string) => {
     setCollapsedBranches((prev) => {
@@ -367,6 +387,8 @@ from io import StringIO
           label: `Branch A from ${parentCell.label}`,
           description: "",
           color: getRandomColor(),
+          snapshots: [],
+          currentSnapshotId: null,
         };
       })(),
       // Create second branch with its own independent context
@@ -404,6 +426,8 @@ from io import StringIO
           label: `Branch B from ${parentCell.label}`,
           description: "",
           color: getRandomColor(),
+          snapshots: [],
+          currentSnapshotId: null,
         };
       })(),
     ]);
@@ -796,6 +820,23 @@ from io import StringIO
               onClick={(e) => e.stopPropagation()}
             >
               <button
+                onClick={() => {
+                  setSelectedCellForSnapshot(cell.id);
+                  setShowSnapshots(true);
+                }}
+                disabled={loading || !pyodide}
+                className={`px-4 py-2 rounded-lg font-medium text-white ${
+                  loading || !pyodide
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : colorMappings[cell.color as keyof typeof colorMappings]
+                        .button
+                }`}
+              >
+                {cell.snapshots.length > 0
+                  ? `Snapshots (${cell.snapshots.length})`
+                  : "Create Snapshot"}
+              </button>
+              <button
                 onClick={() => forkCell(cell.id)}
                 disabled={loading || !pyodide}
                 className={`px-4 py-2 rounded-lg font-medium text-white ${
@@ -836,6 +877,28 @@ from io import StringIO
                 <pre className="text-sm whitespace-pre-wrap font-mono">
                   {cell.output}
                 </pre>
+              </div>
+            )}
+
+            {/* Snapshot indicator */}
+            {cell.currentSnapshotId && (
+              <div className="mt-2 text-sm text-gray-500">
+                Currently viewing snapshot:{" "}
+                {
+                  cell.snapshots.find((s) => s.id === cell.currentSnapshotId)
+                    ?.label
+                }
+                <button
+                  onClick={() => {
+                    const updatedCells = cells.map((c) =>
+                      c.id === cell.id ? { ...c, currentSnapshotId: null } : c
+                    );
+                    setCells(updatedCells);
+                  }}
+                  className="ml-2 text-blue-500 hover:text-blue-600"
+                >
+                  Return to Current
+                </button>
               </div>
             )}
           </div>
@@ -906,6 +969,52 @@ from io import StringIO
     backtrack(dp, lines1, lines2, lines1.length, lines2.length);
 
     return { added, removed, unchanged };
+  };
+
+  // Function to create a snapshot of a cell
+  const createSnapshot = (cellId: string, snapshotLabel: string) => {
+    const cell = cells.find((c) => c.id === cellId);
+    if (!cell) return;
+
+    const snapshot: Snapshot = {
+      id: `snapshot-${Date.now()}`,
+      timestamp: Date.now(),
+      code: cell.code,
+      output: cell.output,
+      error: cell.error,
+      executionContext: cell.executionContext,
+      label: snapshotLabel,
+      description: cell.description,
+      color: cell.color,
+    };
+
+    const updatedCells = cells.map((c) =>
+      c.id === cellId ? { ...c, snapshots: [...c.snapshots, snapshot] } : c
+    );
+    setCells(updatedCells);
+  };
+
+  // Function to restore a snapshot
+  const restoreSnapshot = (cellId: string, snapshotId: string) => {
+    const cell = cells.find((c) => c.id === cellId);
+    if (!cell) return;
+
+    const snapshot = cell.snapshots.find((s) => s.id === snapshotId);
+    if (!snapshot) return;
+
+    const updatedCells = cells.map((c) =>
+      c.id === cellId
+        ? {
+            ...c,
+            code: snapshot.code,
+            output: snapshot.output,
+            error: snapshot.error,
+            executionContext: snapshot.executionContext,
+            currentSnapshotId: snapshot.id,
+          }
+        : c
+    );
+    setCells(updatedCells);
   };
 
   return (
@@ -1075,6 +1184,94 @@ from io import StringIO
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Snapshots Modal */}
+      {showSnapshots && selectedCellForSnapshot && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Branch Snapshots</h2>
+              <button
+                onClick={() => {
+                  setShowSnapshots(false);
+                  setSelectedCellForSnapshot(null);
+                }}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Create new snapshot */}
+            <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+              <h3 className="font-medium mb-2">Create New Snapshot</h3>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Snapshot label"
+                  className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  id="snapshotLabel"
+                />
+                <button
+                  onClick={() => {
+                    const label = (
+                      document.getElementById(
+                        "snapshotLabel"
+                      ) as HTMLInputElement
+                    ).value;
+                    if (label && selectedCellForSnapshot) {
+                      createSnapshot(selectedCellForSnapshot, label);
+                      (
+                        document.getElementById(
+                          "snapshotLabel"
+                        ) as HTMLInputElement
+                      ).value = "";
+                    }
+                  }}
+                  className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg"
+                >
+                  Create Snapshot
+                </button>
+              </div>
+            </div>
+
+            {/* Snapshot timeline */}
+            <div className="space-y-4">
+              <h3 className="font-medium">Snapshot Timeline</h3>
+              {cells
+                .find((c) => c.id === selectedCellForSnapshot)
+                ?.snapshots.map((snapshot) => (
+                  <div
+                    key={snapshot.id}
+                    className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700"
+                  >
+                    <div className="flex justify-between items-center mb-2">
+                      <div>
+                        <h4 className="font-medium">{snapshot.label}</h4>
+                        <p className="text-sm text-gray-500">
+                          {new Date(snapshot.timestamp).toLocaleString()}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          restoreSnapshot(selectedCellForSnapshot, snapshot.id);
+                          setShowSnapshots(false);
+                          setSelectedCellForSnapshot(null);
+                        }}
+                        className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded-lg"
+                      >
+                        Restore
+                      </button>
+                    </div>
+                    <pre className="text-sm bg-white dark:bg-gray-800 p-2 rounded mt-2 max-h-32 overflow-y-auto">
+                      {snapshot.code}
+                    </pre>
+                  </div>
+                ))}
             </div>
           </div>
         </div>
