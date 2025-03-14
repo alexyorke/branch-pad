@@ -3,12 +3,13 @@
 import { useState, useEffect } from "react";
 import { exportAndDownload } from "../utils/export";
 import JSZip from "jszip";
-import { Cell, TreeNode } from "./types";
+import { Cell, TreeNode, Parameter, ParameterSweep } from "./types";
 import { ComparisonModal } from "./components/ComparisonModal";
 import { PackagesModal } from "./components/PackagesModal";
 import { SnapshotsModal } from "./components/SnapshotsModal";
 import { ExportModal } from "./components/ExportModal";
 import { BranchCell } from "./components/BranchCell";
+import { ParameterSweepModal } from "./components/ParameterSweepModal";
 
 declare global {
   interface Window {
@@ -30,6 +31,8 @@ export default function Home() {
       color: "blue",
       snapshots: [],
       currentSnapshotId: null,
+      parameters: [],
+      parameterSweeps: [],
     },
   ]);
   const [loading, setLoading] = useState(false);
@@ -54,6 +57,9 @@ export default function Home() {
   const [selectedCellForExport, setSelectedCellForExport] = useState<
     string | null
   >(null);
+  const [showParameterSweep, setShowParameterSweep] = useState(false);
+  const [selectedCellForParameterSweep, setSelectedCellForParameterSweep] =
+    useState<string | null>(null);
 
   const toggleBranch = (cellId: string) => {
     setCollapsedBranches((prev) => {
@@ -248,6 +254,8 @@ from io import StringIO
           color: getRandomColor(),
           snapshots: [],
           currentSnapshotId: null,
+          parameters: [...parentCell.parameters],
+          parameterSweeps: [],
         };
       })(),
       // Create second branch with its own independent context
@@ -287,6 +295,8 @@ from io import StringIO
           color: getRandomColor(),
           snapshots: [],
           currentSnapshotId: null,
+          parameters: [...parentCell.parameters],
+          parameterSweeps: [],
         };
       })(),
     ]);
@@ -549,6 +559,10 @@ from io import StringIO
             onForkCell={forkCell}
             onRunCode={runCode}
             onCellSelect={toggleCellSelection}
+            onShowParameterSweep={(cellId) => {
+              setSelectedCellForParameterSweep(cellId);
+              setShowParameterSweep(true);
+            }}
           />
         </div>
 
@@ -758,6 +772,126 @@ ${cell.description}
     return colors[Math.floor(Math.random() * colors.length)];
   };
 
+  const runParameterSweep = async (cellId: string, parameters: Parameter[]) => {
+    if (!pyodide) return;
+
+    const cell = cells.find((c) => c.id === cellId);
+    if (!cell) return;
+
+    // Generate all parameter combinations
+    const generateCombinations = (
+      parameters: Parameter[]
+    ): Record<string, any>[] => {
+      const combinations: Record<string, any>[] = [];
+
+      const generateCombination = (
+        current: Record<string, any>,
+        remainingParams: Parameter[]
+      ) => {
+        if (remainingParams.length === 0) {
+          combinations.push(current);
+          return;
+        }
+
+        const param = remainingParams[0];
+        const rest = remainingParams.slice(1);
+
+        if (param.type === "number" && param.range) {
+          const { min = 0, max = 0, step = 1 } = param.range;
+          for (let value = min; value <= max; value += step) {
+            generateCombination({ ...current, [param.name]: value }, rest);
+          }
+        } else if (param.options) {
+          for (const value of param.options) {
+            generateCombination({ ...current, [param.name]: value }, rest);
+          }
+        } else {
+          generateCombination({ ...current, [param.name]: param.value }, rest);
+        }
+      };
+
+      generateCombination({}, parameters);
+      return combinations;
+    };
+
+    const parameterCombinations = generateCombinations(parameters);
+    const results = [];
+
+    // Run code for each parameter combination
+    for (const params of parameterCombinations) {
+      try {
+        // Create a fresh namespace
+        const namespace = pyodide.globals.get("dict")();
+
+        // Set up basic environment
+        await pyodide.runPythonAsync(
+          `
+import sys
+from io import StringIO
+          `,
+          { globals: namespace }
+        );
+
+        // Set up parameter variables
+        for (const [name, value] of Object.entries(params)) {
+          await pyodide.runPythonAsync(`${name} = ${JSON.stringify(value)}`, {
+            globals: namespace,
+          });
+        }
+
+        // Set up stdout capture
+        await pyodide.runPythonAsync("sys.stdout = StringIO()", {
+          globals: namespace,
+        });
+
+        // Run the cell's code
+        await pyodide.runPythonAsync(cell.code, { globals: namespace });
+
+        // Get the output
+        const stdout = await pyodide.runPythonAsync("sys.stdout.getvalue()", {
+          globals: namespace,
+        });
+
+        results.push({
+          parameters: params,
+          output: stdout,
+          error: null,
+        });
+
+        // Reset stdout
+        await pyodide.runPythonAsync("sys.stdout = sys.__stdout__", {
+          globals: namespace,
+        });
+      } catch (err: any) {
+        results.push({
+          parameters: params,
+          output: "",
+          error: err.message,
+        });
+      }
+    }
+
+    // Create a new parameter sweep
+    const sweep: ParameterSweep = {
+      id: `sweep-${Date.now()}`,
+      parameters,
+      results,
+    };
+
+    // Update the cell with the new sweep
+    const updatedCells = cells.map((c) =>
+      c.id === cellId
+        ? {
+            ...c,
+            parameters,
+            parameterSweeps: [...c.parameterSweeps, sweep],
+          }
+        : c
+    );
+
+    setCells(updatedCells);
+  };
+
   return (
     <div className="min-h-screen p-8 flex flex-col items-center gap-8 font-[family-name:var(--font-geist-sans)]">
       <div className="flex items-center gap-4">
@@ -850,9 +984,71 @@ ${cell.description}
         />
       )}
 
+      {/* Parameter Sweep Modal */}
+      {showParameterSweep && selectedCellForParameterSweep && (
+        <ParameterSweepModal
+          cell={cells.find((c) => c.id === selectedCellForParameterSweep)!}
+          onClose={() => {
+            setShowParameterSweep(false);
+            setSelectedCellForParameterSweep(null);
+          }}
+          onRunParameterSweep={runParameterSweep}
+        />
+      )}
+
       <div className="w-full overflow-x-auto">
         <div className="min-w-[90rem] px-8 mx-auto">
-          {buildTree(cells) && renderTreeNode(buildTree(cells)!)}
+          {buildTree(cells) && (
+            <BranchCell
+              cell={buildTree(cells)!.cell}
+              isRoot={!buildTree(cells)!.cell.parentId}
+              hasChildren={buildTree(cells)!.children.length > 0}
+              childrenCount={buildTree(cells)!.children.length}
+              isCollapsed={collapsedBranches.has(buildTree(cells)!.cell.id)}
+              isSelected={comparison.selectedCells.includes(
+                buildTree(cells)!.cell.id
+              )}
+              isComparisonMode={comparison.isActive}
+              loading={loading}
+              pyodide={pyodide}
+              onToggleBranch={toggleBranch}
+              onLabelChange={(cellId, label) => {
+                const updatedCells = cells.map((c) =>
+                  c.id === cellId ? { ...c, label } : c
+                );
+                setCells(updatedCells);
+              }}
+              onDescriptionChange={(cellId, description) => {
+                const updatedCells = cells.map((c) =>
+                  c.id === cellId ? { ...c, description } : c
+                );
+                setCells(updatedCells);
+              }}
+              onColorChange={(cellId, color) => {
+                const updatedCells = cells.map((c) =>
+                  c.id === cellId ? { ...c, color } : c
+                );
+                setCells(updatedCells);
+              }}
+              onCodeChange={(cellId, code) => {
+                const updatedCells = cells.map((c) =>
+                  c.id === cellId ? { ...c, code } : c
+                );
+                setCells(updatedCells);
+              }}
+              onShowSnapshots={(cellId) => {
+                setSelectedCellForSnapshot(cellId);
+                setShowSnapshots(true);
+              }}
+              onForkCell={forkCell}
+              onRunCode={runCode}
+              onCellSelect={toggleCellSelection}
+              onShowParameterSweep={(cellId) => {
+                setSelectedCellForParameterSweep(cellId);
+                setShowParameterSweep(true);
+              }}
+            />
+          )}
         </div>
       </div>
     </div>

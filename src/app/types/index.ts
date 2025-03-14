@@ -22,6 +22,8 @@ export interface Cell {
   color: string;
   snapshots: Snapshot[];
   currentSnapshotId: string | null;
+  parameters: Parameter[];
+  parameterSweeps: ParameterSweep[];
 }
 
 export interface TreeNode {
@@ -32,6 +34,28 @@ export interface TreeNode {
 export interface ComparisonState {
   isActive: boolean;
   selectedCells: string[];
+}
+
+export interface Parameter {
+  name: string;
+  type: 'number' | 'string' | 'boolean';
+  value: string | number | boolean;
+  range?: {
+    min?: number;
+    max?: number;
+    step?: number;
+  };
+  options?: (string | number | boolean)[];
+}
+
+export interface ParameterSweep {
+  id: string;
+  parameters: Parameter[];
+  results: {
+    parameters: Record<string, any>;
+    output: string;
+    error: string | null;
+  }[];
 }
 
 // Color mappings for Tailwind classes

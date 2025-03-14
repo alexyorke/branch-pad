@@ -22,6 +22,7 @@ interface BranchCellProps {
   onForkCell: (cellId: string) => void;
   onRunCode: (cellId: string) => void;
   onCellSelect: (cellId: string) => void;
+  onShowParameterSweep: (cellId: string) => void;
 }
 
 export function BranchCell({
@@ -43,6 +44,7 @@ export function BranchCell({
   onForkCell,
   onRunCode,
   onCellSelect,
+  onShowParameterSweep,
 }: BranchCellProps) {
   return (
     <div
@@ -246,6 +248,17 @@ export function BranchCell({
         className="flex justify-end gap-2"
         onClick={(e) => e.stopPropagation()}
       >
+        <button
+          onClick={() => onShowParameterSweep(cell.id)}
+          disabled={loading || !pyodide}
+          className={`px-4 py-2 rounded-lg font-medium text-white ${
+            loading || !pyodide
+              ? "bg-gray-400 cursor-not-allowed"
+              : colorMappings[cell.color as keyof typeof colorMappings].button
+          }`}
+        >
+          Parameter Sweep
+        </button>
         <button
           onClick={() => onShowSnapshots(cell.id)}
           disabled={loading || !pyodide}
