@@ -26,6 +26,109 @@ interface TreeNode {
   children: TreeNode[];
 }
 
+// Color mappings for Tailwind classes
+const colorMappings = {
+  blue: {
+    border: "border-blue-200 dark:border-blue-800",
+    bg: "bg-blue-50 dark:bg-blue-900/10",
+    text: "text-blue-600 dark:text-blue-400",
+    button: "bg-blue-500 hover:bg-blue-600",
+    ring: "focus:ring-blue-500",
+    buttonBg: "bg-blue-500",
+    buttonRing: "ring-blue-400",
+  },
+  purple: {
+    border: "border-purple-200 dark:border-purple-800",
+    bg: "bg-purple-50 dark:bg-purple-900/10",
+    text: "text-purple-600 dark:text-purple-400",
+    button: "bg-purple-500 hover:bg-purple-600",
+    ring: "focus:ring-purple-500",
+    buttonBg: "bg-purple-500",
+    buttonRing: "ring-purple-400",
+  },
+  green: {
+    border: "border-green-200 dark:border-green-800",
+    bg: "bg-green-50 dark:bg-green-900/10",
+    text: "text-green-600 dark:text-green-400",
+    button: "bg-green-500 hover:bg-green-600",
+    ring: "focus:ring-green-500",
+    buttonBg: "bg-green-500",
+    buttonRing: "ring-green-400",
+  },
+  orange: {
+    border: "border-orange-200 dark:border-orange-800",
+    bg: "bg-orange-50 dark:bg-orange-900/10",
+    text: "text-orange-600 dark:text-orange-400",
+    button: "bg-orange-500 hover:bg-orange-600",
+    ring: "focus:ring-orange-500",
+    buttonBg: "bg-orange-500",
+    buttonRing: "ring-orange-400",
+  },
+  pink: {
+    border: "border-pink-200 dark:border-pink-800",
+    bg: "bg-pink-50 dark:bg-pink-900/10",
+    text: "text-pink-600 dark:text-pink-400",
+    button: "bg-pink-500 hover:bg-pink-600",
+    ring: "focus:ring-pink-500",
+    buttonBg: "bg-pink-500",
+    buttonRing: "ring-pink-400",
+  },
+  teal: {
+    border: "border-teal-200 dark:border-teal-800",
+    bg: "bg-teal-50 dark:bg-teal-900/10",
+    text: "text-teal-600 dark:text-teal-400",
+    button: "bg-teal-500 hover:bg-teal-600",
+    ring: "focus:ring-teal-500",
+    buttonBg: "bg-teal-500",
+    buttonRing: "ring-teal-400",
+  },
+  cyan: {
+    border: "border-cyan-200 dark:border-cyan-800",
+    bg: "bg-cyan-50 dark:bg-cyan-900/10",
+    text: "text-cyan-600 dark:text-cyan-400",
+    button: "bg-cyan-500 hover:bg-cyan-600",
+    ring: "focus:ring-cyan-500",
+    buttonBg: "bg-cyan-500",
+    buttonRing: "ring-cyan-400",
+  },
+  amber: {
+    border: "border-amber-200 dark:border-amber-800",
+    bg: "bg-amber-50 dark:bg-amber-900/10",
+    text: "text-amber-600 dark:text-amber-400",
+    button: "bg-amber-500 hover:bg-amber-600",
+    ring: "focus:ring-amber-500",
+    buttonBg: "bg-amber-500",
+    buttonRing: "ring-amber-400",
+  },
+  indigo: {
+    border: "border-indigo-200 dark:border-indigo-800",
+    bg: "bg-indigo-50 dark:bg-indigo-900/10",
+    text: "text-indigo-600 dark:text-indigo-400",
+    button: "bg-indigo-500 hover:bg-indigo-600",
+    ring: "focus:ring-indigo-500",
+    buttonBg: "bg-indigo-500",
+    buttonRing: "ring-indigo-400",
+  },
+  rose: {
+    border: "border-rose-200 dark:border-rose-800",
+    bg: "bg-rose-50 dark:bg-rose-900/10",
+    text: "text-rose-600 dark:text-rose-400",
+    button: "bg-rose-500 hover:bg-rose-600",
+    ring: "focus:ring-rose-500",
+    buttonBg: "bg-rose-500",
+    buttonRing: "ring-rose-400",
+  },
+  emerald: {
+    border: "border-emerald-200 dark:border-emerald-800",
+    bg: "bg-emerald-50 dark:bg-emerald-900/10",
+    text: "text-emerald-600 dark:text-emerald-400",
+    button: "bg-emerald-500 hover:bg-emerald-600",
+    ring: "focus:ring-emerald-500",
+    buttonBg: "bg-emerald-500",
+    buttonRing: "ring-emerald-400",
+  },
+} as const;
+
 export default function Home() {
   const [cells, setCells] = useState<Cell[]>([
     {
@@ -473,11 +576,7 @@ from io import StringIO
           <div
             className={`
             w-[32rem] space-y-4 border-2 rounded-lg p-4
-            ${
-              isRoot
-                ? "border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/10"
-                : `border-${cell.color}-200 dark:border-${cell.color}-800 bg-${cell.color}-50 dark:bg-${cell.color}-900/10`
-            }
+            ${colorMappings[cell.color as keyof typeof colorMappings].border}
           `}
           >
             {/* Cell header with branch info */}
@@ -494,11 +593,11 @@ from io import StringIO
                       setCells(updatedCells);
                     }}
                     className={`text-sm font-medium bg-transparent border-none focus:outline-none focus:ring-2 focus:ring-${
-                      cell.color
-                    }-500 rounded px-1 ${
-                      isRoot
-                        ? "text-blue-600 dark:text-blue-400"
-                        : `text-${cell.color}-600 dark:text-${cell.color}-400`
+                      colorMappings[cell.color as keyof typeof colorMappings]
+                        .ring
+                    } rounded px-1 ${
+                      colorMappings[cell.color as keyof typeof colorMappings]
+                        .text
                     }`}
                     placeholder="Enter branch name..."
                   />
@@ -525,7 +624,11 @@ from io import StringIO
                   setCells(updatedCells);
                 }}
                 placeholder="Add branch description..."
-                className={`w-full px-3 py-2 text-sm bg-white/50 dark:bg-gray-900/50 border border-${cell.color}-200 dark:border-${cell.color}-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-${cell.color}-500`}
+                className={`w-full px-3 py-2 text-sm bg-white/50 dark:bg-gray-900/50 border border-${
+                  colorMappings[cell.color as keyof typeof colorMappings].border
+                } rounded-lg focus:outline-none focus:ring-2 focus:ring-${
+                  colorMappings[cell.color as keyof typeof colorMappings].ring
+                }`}
                 rows={2}
               />
 
@@ -533,19 +636,7 @@ from io import StringIO
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-500">Branch color:</span>
                 <div className="flex gap-1">
-                  {[
-                    "blue",
-                    "purple",
-                    "green",
-                    "orange",
-                    "pink",
-                    "teal",
-                    "cyan",
-                    "amber",
-                    "indigo",
-                    "rose",
-                    "emerald",
-                  ].map((color) => (
+                  {Object.keys(colorMappings).map((color) => (
                     <button
                       key={color}
                       onClick={() => {
@@ -554,8 +645,12 @@ from io import StringIO
                         );
                         setCells(updatedCells);
                       }}
-                      className={`w-4 h-4 rounded-full bg-${color}-500 hover:ring-2 hover:ring-${color}-400 ${
-                        cell.color === color ? `ring-2 ring-${color}-400` : ""
+                      className={`w-4 h-4 rounded-full ${
+                        colorMappings[color as keyof typeof colorMappings]
+                          .buttonBg
+                      } hover:ring-2 ${cell.color === color ? "ring-2" : ""} ${
+                        colorMappings[color as keyof typeof colorMappings]
+                          .buttonRing
                       }`}
                     />
                   ))}
@@ -582,7 +677,8 @@ from io import StringIO
                 className={`px-4 py-2 rounded-lg font-medium text-white ${
                   loading || !pyodide
                     ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-green-500 hover:bg-green-600"
+                    : colorMappings[cell.color as keyof typeof colorMappings]
+                        .button
                 }`}
               >
                 Branch
@@ -594,7 +690,8 @@ from io import StringIO
                 className={`px-4 py-2 rounded-lg font-medium text-white ${
                   loading || !pyodide
                     ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-blue-500 hover:bg-blue-600"
+                    : colorMappings[cell.color as keyof typeof colorMappings]
+                        .button
                 }`}
               >
                 {loading ? "Loading Python..." : "Run"}
