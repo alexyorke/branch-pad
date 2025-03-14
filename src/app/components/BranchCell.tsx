@@ -2,6 +2,7 @@
 
 import { Cell, colorMappings } from "../types";
 import Editor from "@monaco-editor/react";
+import { useState, useRef, useEffect } from "react";
 
 interface BranchCellProps {
   cell: Cell;
@@ -46,6 +47,51 @@ export function BranchCell({
   onCellSelect,
   onShowParameterSweep,
 }: BranchCellProps) {
+  const [editorHeight, setEditorHeight] = useState(192); // 48rem = 192px
+  const [isResizing, setIsResizing] = useState(false);
+  const resizeStartY = useRef(0);
+  const startHeight = useRef(0);
+  const editorContainerRef = useRef<HTMLDivElement>(null);
+
+  // Handle mouse events for resizing
+  const handleResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsResizing(true);
+    resizeStartY.current = e.clientY;
+    startHeight.current = editorHeight;
+
+    // Add event listeners for mouse move and mouse up
+    document.addEventListener("mousemove", handleResizeMove);
+    document.addEventListener("mouseup", handleResizeEnd);
+  };
+
+  const handleResizeMove = (e: MouseEvent) => {
+    if (!isResizing) return;
+    const deltaY = e.clientY - resizeStartY.current;
+    const newHeight = Math.max(96, startHeight.current + deltaY); // Minimum height of 96px
+    setEditorHeight(newHeight);
+  };
+
+  const handleResizeEnd = () => {
+    setIsResizing(false);
+    document.removeEventListener("mousemove", handleResizeMove);
+    document.removeEventListener("mouseup", handleResizeEnd);
+  };
+
+  // Clean up event listeners on unmount
+  useEffect(() => {
+    return () => {
+      document.removeEventListener("mousemove", handleResizeMove);
+      document.removeEventListener("mouseup", handleResizeEnd);
+    };
+  }, []);
+
+  // Preset height options
+  const setPresetHeight = (height: number) => {
+    setEditorHeight(height);
+  };
+
   return (
     <div
       className={`
@@ -187,7 +233,11 @@ export function BranchCell({
         />
       </div>
 
-      <div className="h-48 bg-secondary/30 dark:bg-secondary/10 border border-border/50 rounded-md overflow-hidden shadow-sm mt-4 flex flex-col">
+      <div
+        ref={editorContainerRef}
+        className="bg-secondary/30 dark:bg-secondary/10 border border-border/50 rounded-md overflow-hidden shadow-sm mt-4 flex flex-col"
+        style={{ height: `${editorHeight}px` }}
+      >
         <div className="flex items-center justify-between px-3 py-1.5 bg-secondary/50 dark:bg-secondary/30 border-b border-border/50">
           <div className="flex items-center gap-2">
             <svg
@@ -213,56 +263,42 @@ export function BranchCell({
             <div className="text-xs text-secondary-foreground/50">
               {cell.code.split("\n").length} lines
             </div>
-            <button
-              className="text-xs text-secondary-foreground/70 hover:text-secondary-foreground transition-colors cursor-pointer flex items-center gap-1"
-              onClick={(e) => {
-                e.stopPropagation();
-                const button = e.currentTarget;
-                const parentDiv = button.closest("div");
-                const editorContainer = parentDiv?.parentElement;
-
-                if (!editorContainer) return;
-
-                if (editorContainer.classList.contains("h-48")) {
-                  editorContainer.classList.remove("h-48");
-                  editorContainer.classList.add("h-96");
-                  button.innerHTML =
-                    '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"></polyline><polyline points="20 10 14 10 14 4"></polyline><line x1="14" y1="10" x2="21" y2="3"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg> Collapse';
-                } else if (editorContainer.classList.contains("h-96")) {
-                  editorContainer.classList.remove("h-96");
-                  editorContainer.classList.add("h-[32rem]");
-                  button.innerHTML =
-                    '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"></polyline><polyline points="20 10 14 10 14 4"></polyline><line x1="14" y1="10" x2="21" y2="3"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg> Default';
-                } else {
-                  editorContainer.classList.remove("h-[32rem]");
-                  editorContainer.classList.add("h-48");
-                  button.innerHTML =
-                    '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 4 10 4 10 10"></polyline><polyline points="20 20 14 20 14 14"></polyline><line x1="14" y1="20" x2="21" y2="13"></line><line x1="3" y1="3" x2="10" y2="10"></line></svg> Expand';
-                }
-              }}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+            <div className="flex items-center gap-1">
+              <button
+                className="text-xs text-secondary-foreground/70 hover:text-secondary-foreground transition-colors cursor-pointer px-1.5 py-0.5 rounded hover:bg-secondary/80"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPresetHeight(192); // Small - 48rem
+                }}
+                title="Small editor"
               >
-                <polyline points="4 4 10 4 10 10"></polyline>
-                <polyline points="20 20 14 20 14 14"></polyline>
-                <line x1="14" y1="20" x2="21" y2="13"></line>
-                <line x1="3" y1="3" x2="10" y2="10"></line>
-              </svg>
-              Expand
-            </button>
+                S
+              </button>
+              <button
+                className="text-xs text-secondary-foreground/70 hover:text-secondary-foreground transition-colors cursor-pointer px-1.5 py-0.5 rounded hover:bg-secondary/80"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPresetHeight(384); // Medium - 96rem
+                }}
+                title="Medium editor"
+              >
+                M
+              </button>
+              <button
+                className="text-xs text-secondary-foreground/70 hover:text-secondary-foreground transition-colors cursor-pointer px-1.5 py-0.5 rounded hover:bg-secondary/80"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPresetHeight(576); // Large - 144rem
+                }}
+                title="Large editor"
+              >
+                L
+              </button>
+            </div>
           </div>
         </div>
         <Editor
-          height="calc(100% - 30px)"
+          height={`${editorHeight - 30}px`} // Subtract header height
           defaultLanguage="python"
           theme={
             typeof window !== "undefined" &&
@@ -316,6 +352,15 @@ export function BranchCell({
             );
           }}
         />
+        {/* Resize handle */}
+        <div
+          className={`h-2 w-full cursor-ns-resize flex items-center justify-center hover:bg-secondary/50 ${
+            isResizing ? "bg-primary/20" : ""
+          }`}
+          onMouseDown={handleResizeStart}
+        >
+          <div className="w-16 h-1 rounded-full bg-secondary-foreground/20"></div>
+        </div>
       </div>
 
       <div
