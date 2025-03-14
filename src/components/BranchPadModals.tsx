@@ -32,61 +32,75 @@ export function BranchPadModals() {
     runParameterSweep,
   } = useBranchPad();
 
+  // Common modal backdrop style for consistency
+  const modalBackdrop =
+    "fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center";
+
   return (
     <>
       {/* Comparison Modal */}
       {comparison.isActive && comparison.selectedCells.length === 2 && (
-        <ComparisonModal
-          selectedCells={comparison.selectedCells}
-          cells={cells}
-          onClose={toggleComparisonMode}
-        />
+        <div className={modalBackdrop}>
+          <ComparisonModal
+            selectedCells={comparison.selectedCells}
+            cells={cells}
+            onClose={toggleComparisonMode}
+          />
+        </div>
       )}
 
       {/* Package Modal */}
       {showPackages && (
-        <PackagesModal
-          packageList={packageList}
-          onClose={() => setShowPackages(false)}
-        />
+        <div className={modalBackdrop}>
+          <PackagesModal
+            packageList={packageList}
+            onClose={() => setShowPackages(false)}
+          />
+        </div>
       )}
 
       {/* Snapshots Modal */}
       {showSnapshots && selectedCellForSnapshot && (
-        <SnapshotsModal
-          selectedCellId={selectedCellForSnapshot}
-          cells={cells}
-          onClose={() => {
-            setShowSnapshots(false);
-            setSelectedCellForSnapshot(null);
-          }}
-          onCreateSnapshot={createSnapshot}
-          onRestoreSnapshot={restoreSnapshot}
-        />
+        <div className={modalBackdrop}>
+          <SnapshotsModal
+            selectedCellId={selectedCellForSnapshot}
+            cells={cells}
+            onClose={() => {
+              setShowSnapshots(false);
+              setSelectedCellForSnapshot(null);
+            }}
+            onCreateSnapshot={createSnapshot}
+            onRestoreSnapshot={restoreSnapshot}
+          />
+        </div>
       )}
 
       {/* Export Modal */}
       {showExport && (
-        <ExportModal
-          cells={cells}
-          onClose={() => {
-            setShowExport(false);
-            setSelectedCellForExport(null);
-          }}
-          onExport={generateDeploymentFiles}
-        />
+        <div className={modalBackdrop}>
+          <ExportModal
+            cells={cells}
+            onClose={() => {
+              setShowExport(false);
+              setSelectedCellForExport(null);
+            }}
+            onExport={generateDeploymentFiles}
+          />
+        </div>
       )}
 
       {/* Parameter Sweep Modal */}
       {showParameterSweep && selectedCellForParameterSweep && (
-        <ParameterSweepModal
-          cell={cells.find((c) => c.id === selectedCellForParameterSweep)!}
-          onClose={() => {
-            setShowParameterSweep(false);
-            setSelectedCellForParameterSweep(null);
-          }}
-          onRunParameterSweep={runParameterSweep}
-        />
+        <div className={modalBackdrop}>
+          <ParameterSweepModal
+            cell={cells.find((c) => c.id === selectedCellForParameterSweep)!}
+            onClose={() => {
+              setShowParameterSweep(false);
+              setSelectedCellForParameterSweep(null);
+            }}
+            onRunParameterSweep={runParameterSweep}
+          />
+        </div>
       )}
     </>
   );

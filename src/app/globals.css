@@ -3,6 +3,15 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --secondary: #f3f4f6;
+  --secondary-foreground: #1f2937;
+  --accent: #f9fafb;
+  --accent-foreground: #111827;
+  --border: #e5e7eb;
+  --input: #f3f4f6;
+  --ring: #93c5fd;
 }
 
 @theme inline {
@@ -14,13 +23,55 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0f172a;
+    --foreground: #f8fafc;
+    --primary: #3b82f6;
+    --primary-foreground: #ffffff;
+    --secondary: #1e293b;
+    --secondary-foreground: #f8fafc;
+    --accent: #1e293b;
+    --accent-foreground: #f8fafc;
+    --border: #334155;
+    --input: #1e293b;
+    --ring: #1d4ed8;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+@media (prefers-color-scheme: dark) {
+  ::-webkit-scrollbar-thumb {
+    background: #334155;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+  }
 }

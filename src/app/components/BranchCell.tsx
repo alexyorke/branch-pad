@@ -49,13 +49,13 @@ export function BranchCell({
   return (
     <div
       className={`
-        w-[32rem] space-y-4 border-2 rounded-lg p-4 relative
+        w-[32rem] space-y-4 rounded-xl shadow-sm p-5 relative
         ${
           isComparisonMode
-            ? "cursor-pointer transition-transform hover:scale-[1.02]"
+            ? "cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.01]"
             : ""
         }
-        ${isSelected ? "ring-2 ring-offset-2" : ""}
+        ${isSelected ? "ring-2 ring-primary ring-offset-2" : ""}
         ${colorMappings[cell.color as keyof typeof colorMappings].border}
         ${colorMappings[cell.color as keyof typeof colorMappings].bg}
       `}
@@ -63,7 +63,7 @@ export function BranchCell({
     >
       {/* Selection indicator */}
       {isComparisonMode && (
-        <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 flex items-center justify-center">
+        <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-background shadow-sm border border-border flex items-center justify-center">
           {isSelected ? (
             <div className="w-4 h-4 rounded-full bg-green-500" />
           ) : (
@@ -73,18 +73,20 @@ export function BranchCell({
       )}
 
       {/* Cell header with branch info */}
-      <div className="space-y-2">
+      <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-1">
             {hasChildren && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   onToggleBranch(cell.id);
                 }}
-                className={`w-5 h-5 flex items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${
+                className={`w-6 h-6 flex items-center justify-center rounded-md hover:bg-secondary transition-colors cursor-pointer ${
                   colorMappings[cell.color as keyof typeof colorMappings].text
                 }`}
+                aria-label={isCollapsed ? "Expand branch" : "Collapse branch"}
+                title={isCollapsed ? "Expand branch" : "Collapse branch"}
               >
                 {isCollapsed ? (
                   <svg
@@ -117,78 +119,150 @@ export function BranchCell({
                 )}
               </button>
             )}
-            <input
-              type="text"
-              value={cell.label}
-              onChange={(e) => {
-                e.stopPropagation();
-                onLabelChange(cell.id, e.target.value);
-              }}
-              className={`text-sm font-medium bg-transparent border-none focus:outline-none focus:ring-2 ${
-                colorMappings[cell.color as keyof typeof colorMappings].ring
-              } rounded px-1 ${
-                colorMappings[cell.color as keyof typeof colorMappings].text
-              }`}
-              placeholder="Enter branch name..."
-            />
-            {cell.parentId && (
-              <span className="text-xs text-gray-500">
-                (from {cell.parentId})
-              </span>
+
+            <div className="flex-1 min-w-0">
+              <input
+                type="text"
+                value={cell.label}
+                onChange={(e) => onLabelChange(cell.id, e.target.value)}
+                placeholder="Branch name"
+                className={`w-full font-medium text-lg bg-transparent border-0 border-b border-transparent focus:border-b focus:outline-none focus:ring-0 truncate cursor-text ${
+                  colorMappings[cell.color as keyof typeof colorMappings].text
+                }`}
+                onClick={(e) => e.stopPropagation()}
+              />
+              {isRoot && (
+                <div className="text-xs text-secondary-foreground/60 mt-0.5">
+                  Root branch
+                </div>
+              )}
+              {!isRoot && cell.parentId && (
+                <div className="text-xs text-secondary-foreground/60 mt-0.5">
+                  Forked from {cell.parentId.substring(0, 8)}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
+              <div className="text-xs text-secondary-foreground/60 hidden sm:block">
+                Color:
+              </div>
+              <select
+                value={cell.color}
+                onChange={(e) => onColorChange(cell.id, e.target.value)}
+                className="h-7 text-xs rounded border-0 bg-secondary/50 focus:ring-1 focus:ring-primary cursor-pointer"
+                onClick={(e) => e.stopPropagation()}
+                aria-label="Branch color"
+                title="Branch color"
+              >
+                <option value="blue">Blue</option>
+                <option value="purple">Purple</option>
+                <option value="green">Green</option>
+                <option value="orange">Orange</option>
+                <option value="pink">Pink</option>
+                <option value="teal">Teal</option>
+                <option value="cyan">Cyan</option>
+                <option value="amber">Amber</option>
+                <option value="indigo">Indigo</option>
+                <option value="rose">Rose</option>
+                <option value="emerald">Emerald</option>
+              </select>
+            </div>
+            {hasChildren && (
+              <div className="text-xs px-2 py-0.5 bg-secondary/50 rounded-full text-secondary-foreground/70">
+                {childrenCount} {childrenCount === 1 ? "branch" : "branches"}
+              </div>
             )}
           </div>
-          {hasChildren && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-500">
-                {hasChildren &&
-                  `${childrenCount} branch${childrenCount > 1 ? "es" : ""}`}
-                {isCollapsed ? " (collapsed)" : ""}
-              </span>
-            </div>
-          )}
         </div>
 
-        {/* Branch description */}
         <textarea
           value={cell.description}
-          onChange={(e) => {
-            e.stopPropagation();
-            onDescriptionChange(cell.id, e.target.value);
-          }}
-          placeholder="Add branch description..."
-          className={`w-full px-3 py-2 text-sm bg-white/50 dark:bg-gray-900/50 border ${
-            colorMappings[cell.color as keyof typeof colorMappings].border
-          } rounded-lg focus:outline-none focus:ring-2 ${
-            colorMappings[cell.color as keyof typeof colorMappings].ring
-          }`}
-          rows={2}
-        />
-
-        {/* Color selector */}
-        <div
-          className="flex items-center gap-2"
+          onChange={(e) => onDescriptionChange(cell.id, e.target.value)}
+          placeholder="Add a description..."
+          className="w-full h-16 text-sm bg-transparent border border-border/50 rounded-md p-2 focus:outline-none focus:ring-1 focus:ring-primary resize-none cursor-text"
           onClick={(e) => e.stopPropagation()}
-        >
-          <span className="text-xs text-gray-500">Branch color:</span>
-          <div className="flex gap-1">
-            {Object.keys(colorMappings).map((color) => (
-              <button
-                key={color}
-                onClick={() => onColorChange(cell.id, color)}
-                className={`w-4 h-4 rounded-full ${
-                  colorMappings[color as keyof typeof colorMappings].buttonBg
-                } hover:ring-2 ${cell.color === color ? "ring-2" : ""} ${
-                  colorMappings[color as keyof typeof colorMappings].buttonRing
-                }`}
-              />
-            ))}
-          </div>
-        </div>
+        />
       </div>
 
-      <div className="h-48 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+      <div className="h-48 bg-secondary/30 dark:bg-secondary/10 border border-border/50 rounded-md overflow-hidden shadow-sm mt-4 flex flex-col">
+        <div className="flex items-center justify-between px-3 py-1.5 bg-secondary/50 dark:bg-secondary/30 border-b border-border/50">
+          <div className="flex items-center gap-2">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+              <polyline points="15 3 21 3 21 9"></polyline>
+              <line x1="10" y1="14" x2="21" y2="3"></line>
+            </svg>
+            <span className="text-xs font-medium text-secondary-foreground/70">
+              Python
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="text-xs text-secondary-foreground/50">
+              {cell.code.split("\n").length} lines
+            </div>
+            <button
+              className="text-xs text-secondary-foreground/70 hover:text-secondary-foreground transition-colors cursor-pointer flex items-center gap-1"
+              onClick={(e) => {
+                e.stopPropagation();
+                const button = e.currentTarget;
+                const parentDiv = button.closest("div");
+                const editorContainer = parentDiv?.parentElement;
+
+                if (!editorContainer) return;
+
+                if (editorContainer.classList.contains("h-48")) {
+                  editorContainer.classList.remove("h-48");
+                  editorContainer.classList.add("h-96");
+                  button.innerHTML =
+                    '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"></polyline><polyline points="20 10 14 10 14 4"></polyline><line x1="14" y1="10" x2="21" y2="3"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg> Collapse';
+                } else if (editorContainer.classList.contains("h-96")) {
+                  editorContainer.classList.remove("h-96");
+                  editorContainer.classList.add("h-[32rem]");
+                  button.innerHTML =
+                    '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"></polyline><polyline points="20 10 14 10 14 4"></polyline><line x1="14" y1="10" x2="21" y2="3"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg> Default';
+                } else {
+                  editorContainer.classList.remove("h-[32rem]");
+                  editorContainer.classList.add("h-48");
+                  button.innerHTML =
+                    '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 4 10 4 10 10"></polyline><polyline points="20 20 14 20 14 14"></polyline><line x1="14" y1="20" x2="21" y2="13"></line><line x1="3" y1="3" x2="10" y2="10"></line></svg> Expand';
+                }
+              }}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="4 4 10 4 10 10"></polyline>
+                <polyline points="20 20 14 20 14 14"></polyline>
+                <line x1="14" y1="20" x2="21" y2="13"></line>
+                <line x1="3" y1="3" x2="10" y2="10"></line>
+              </svg>
+              Expand
+            </button>
+          </div>
+        </div>
         <Editor
-          height="100%"
+          height="calc(100% - 30px)"
           defaultLanguage="python"
           theme={
             typeof window !== "undefined" &&
@@ -245,69 +319,151 @@ export function BranchCell({
       </div>
 
       <div
-        className="flex justify-end gap-2"
+        className="flex flex-wrap items-center justify-between gap-2 mt-4"
         onClick={(e) => e.stopPropagation()}
       >
-        <button
-          onClick={() => onShowParameterSweep(cell.id)}
-          disabled={loading || !pyodide}
-          className={`px-4 py-2 rounded-lg font-medium text-white ${
-            loading || !pyodide
-              ? "bg-gray-400 cursor-not-allowed"
-              : colorMappings[cell.color as keyof typeof colorMappings].button
-          }`}
-        >
-          Parameter Sweep
-        </button>
-        <button
-          onClick={() => onShowSnapshots(cell.id)}
-          disabled={loading || !pyodide}
-          className={`px-4 py-2 rounded-lg font-medium text-white ${
-            loading || !pyodide
-              ? "bg-gray-400 cursor-not-allowed"
-              : colorMappings[cell.color as keyof typeof colorMappings].button
-          }`}
-        >
-          {cell.snapshots.length > 0
-            ? `Snapshots (${cell.snapshots.length})`
-            : "Create Snapshot"}
-        </button>
-        <button
-          onClick={() => onForkCell(cell.id)}
-          disabled={loading || !pyodide}
-          className={`px-4 py-2 rounded-lg font-medium text-white ${
-            loading || !pyodide
-              ? "bg-gray-400 cursor-not-allowed"
-              : colorMappings[cell.color as keyof typeof colorMappings].button
-          }`}
-        >
-          Branch
-        </button>
-        <button
-          onClick={() => onRunCode(cell.id)}
-          disabled={loading || !pyodide}
-          className={`px-4 py-2 rounded-lg font-medium text-white ${
-            loading || !pyodide
-              ? "bg-gray-400 cursor-not-allowed"
-              : colorMappings[cell.color as keyof typeof colorMappings].button
-          }`}
-        >
-          {loading ? "Loading Python..." : "Run"}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onShowParameterSweep(cell.id)}
+            disabled={loading || !pyodide}
+            className={`px-3 py-1.5 text-sm rounded-md font-medium transition-colors ${
+              loading || !pyodide
+                ? "bg-secondary text-secondary-foreground/50 cursor-not-allowed"
+                : "bg-secondary hover:bg-secondary/80 text-secondary-foreground cursor-pointer"
+            }`}
+          >
+            Parameter Sweep
+          </button>
+          <button
+            onClick={() => onShowSnapshots(cell.id)}
+            disabled={loading || !pyodide}
+            className={`px-3 py-1.5 text-sm rounded-md font-medium transition-colors ${
+              loading || !pyodide
+                ? "bg-secondary text-secondary-foreground/50 cursor-not-allowed"
+                : "bg-secondary hover:bg-secondary/80 text-secondary-foreground cursor-pointer"
+            }`}
+          >
+            {cell.snapshots.length > 0
+              ? `Snapshots (${cell.snapshots.length})`
+              : "Create Snapshot"}
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onForkCell(cell.id)}
+            disabled={loading || !pyodide}
+            className={`px-3 py-1.5 text-sm rounded-md font-medium transition-colors ${
+              loading || !pyodide
+                ? "bg-secondary text-secondary-foreground/50 cursor-not-allowed"
+                : "border border-primary/30 bg-transparent hover:bg-primary/5 text-primary cursor-pointer"
+            }`}
+          >
+            Branch
+          </button>
+          <button
+            onClick={() => onRunCode(cell.id)}
+            disabled={loading || !pyodide}
+            className={`px-4 py-1.5 text-sm rounded-md font-medium transition-colors ${
+              loading || !pyodide
+                ? "bg-secondary text-secondary-foreground/50 cursor-not-allowed"
+                : `${
+                    colorMappings[cell.color as keyof typeof colorMappings]
+                      .button
+                  } text-white shadow-sm cursor-pointer`
+            }`}
+          >
+            {loading ? (
+              <span className="flex items-center gap-1">
+                <svg
+                  className="animate-spin h-4 w-4 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                Loading...
+              </span>
+            ) : (
+              <span className="flex items-center gap-1">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+                Run
+              </span>
+            )}
+          </button>
+        </div>
       </div>
 
       {cell.error && (
-        <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-          <pre className="text-red-600 dark:text-red-400 text-sm whitespace-pre-wrap font-mono">
+        <div className="mt-4 p-4 bg-red-50/80 dark:bg-red-900/10 border border-red-200 dark:border-red-800/50 rounded-md shadow-sm">
+          <div className="flex items-center gap-2 mb-2 text-red-600 dark:text-red-400">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <h3 className="font-medium">Error</h3>
+          </div>
+          <pre className="text-red-600 dark:text-red-400 text-sm whitespace-pre-wrap font-mono overflow-auto max-h-40">
             {cell.error}
           </pre>
         </div>
       )}
 
-      {cell.output && (
-        <div className="p-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg">
-          <h2 className="text-sm font-semibold mb-2">Output:</h2>
-          <pre className="text-sm whitespace-pre-wrap font-mono">
+      {cell.output && !cell.error && (
+        <div className="mt-4 p-4 bg-secondary/30 dark:bg-secondary/10 border border-border/50 rounded-md shadow-sm">
+          <div className="flex items-center gap-2 mb-2 text-secondary-foreground/80">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+            </svg>
+            <h3 className="font-medium text-sm">Output</h3>
+          </div>
+          <pre className="text-sm whitespace-pre-wrap font-mono overflow-auto max-h-60 text-foreground/90">
             {cell.output}
           </pre>
         </div>
@@ -315,15 +471,36 @@ export function BranchCell({
 
       {/* Snapshot indicator */}
       {cell.currentSnapshotId && (
-        <div className="mt-2 text-sm text-gray-500">
-          Currently viewing snapshot:{" "}
-          {cell.snapshots.find((s) => s.id === cell.currentSnapshotId)?.label}
+        <div className="mt-4 flex items-center gap-2 text-sm text-secondary-foreground/70 bg-secondary/20 p-2 rounded-md border border-border/30">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          <span>
+            Viewing snapshot:{" "}
+            <span className="font-medium">
+              {
+                cell.snapshots.find((s) => s.id === cell.currentSnapshotId)
+                  ?.label
+              }
+            </span>
+          </span>
           <button
             onClick={(e) => {
               e.stopPropagation();
               // TODO: Add handler for returning to current version
             }}
-            className="ml-2 text-blue-500 hover:text-blue-600"
+            className="ml-auto text-primary hover:text-primary/80 font-medium text-xs"
           >
             Return to Current
           </button>
