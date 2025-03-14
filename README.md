@@ -2,6 +2,8 @@
 
 BranchPad is an interactive Python notebook environment that enables branching experimentation and hypothesis testing. It allows researchers and developers to explore multiple approaches simultaneously while maintaining a clear history of their work.
 
+<img width="1151" alt="image" src="https://github.com/user-attachments/assets/dbe26f80-969a-4fe4-b21c-8a6f1ef81d33" />
+
 ## Features
 
 ### 1. Branch Management
