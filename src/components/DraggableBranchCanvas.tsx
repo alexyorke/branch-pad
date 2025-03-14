@@ -33,6 +33,23 @@ export function DraggableBranchCanvas() {
 
   const [connections, setConnections] = useState<Connection[]>([]);
   const [cellToDelete, setCellToDelete] = useState<Cell | null>(null);
+  const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
+
+  // Track window size
+  useEffect(() => {
+    function handleResize() {
+      setWindowSize({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    }
+
+    // Set initial size
+    handleResize();
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // Initialize positions for new cells
   useEffect(() => {
@@ -42,7 +59,11 @@ export function DraggableBranchCanvas() {
     cells.forEach((cell) => {
       if (!cellPositions[cell.id]) {
         if (!cell.parentId) {
-          newPositions[cell.id] = { x: 0, y: 0 };
+          // Center the root cell based on viewport size
+          newPositions[cell.id] = {
+            x: Math.max(windowSize.width / 2 - 256, 0), // 256 is half of cell width (512)
+            y: 200, // Keep some space at top for header
+          };
           hasNewCells = true;
         } else if (cellPositions[cell.parentId]) {
           const siblings = cells.filter((c) => c.parentId === cell.parentId);
@@ -63,7 +84,7 @@ export function DraggableBranchCanvas() {
     if (hasNewCells) {
       setCellPositions(newPositions);
     }
-  }, [cells, cellPositions, setCellPositions]);
+  }, [cells, cellPositions, setCellPositions, windowSize]);
 
   // Update connections between cells
   useEffect(() => {
