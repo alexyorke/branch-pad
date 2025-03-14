@@ -263,6 +263,7 @@ export function DraggableBranchCanvas() {
                 }
                 const parent = cells.find((c) => c.id === currentParentId);
                 if (!parent) break;
+                if (parent.parentId === null) break; // Exit loop if we've reached the root cell
                 currentParentId = parent.parentId;
               }
 
