@@ -4,6 +4,7 @@ import { BranchPadProvider } from "../context/BranchPadContext";
 import { BranchPadHeader } from "../components/BranchPadHeader";
 import { BranchPadModals } from "../components/BranchPadModals";
 import { BranchTree } from "../components/BranchTree";
+import { DraggableBranchCanvas } from "../components/DraggableBranchCanvas";
 import { useBranchPad } from "../context/BranchPadContext";
 
 // Define the global type for Pyodide
@@ -24,22 +25,18 @@ function BranchPadContent() {
 
       <main className="flex-1 w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="w-full overflow-x-auto pb-12 pt-4">
-          <div className="min-w-[90rem] px-4 mx-auto">
-            {treeRoot ? (
-              <BranchTree node={treeRoot} />
-            ) : (
-              <div className="flex flex-col items-center justify-center h-[50vh] text-center">
-                <div className="bg-secondary/50 backdrop-blur-sm rounded-lg p-8 shadow-sm border border-border">
-                  <h2 className="text-2xl font-semibold mb-2">
-                    No branches yet
-                  </h2>
-                  <p className="text-secondary-foreground/80 max-w-md">
-                    Create your first branch to get started with BranchPad.
-                  </p>
-                </div>
+          {cells.length > 0 ? (
+            <DraggableBranchCanvas />
+          ) : (
+            <div className="flex flex-col items-center justify-center h-[50vh] text-center">
+              <div className="bg-secondary/50 backdrop-blur-sm rounded-lg p-8 shadow-sm border border-border">
+                <h2 className="text-2xl font-semibold mb-2">No branches yet</h2>
+                <p className="text-secondary-foreground/80 max-w-md">
+                  Create your first branch to get started with BranchPad.
+                </p>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </main>
 
@@ -52,7 +49,7 @@ function BranchPadContent() {
   );
 }
 
-export default function Home() {
+export default function BranchPad() {
   return (
     <BranchPadProvider>
       <BranchPadContent />

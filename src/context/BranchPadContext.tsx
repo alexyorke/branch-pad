@@ -47,6 +47,10 @@ interface BranchPadContextType {
   setSelectedCellForParameterSweep: React.Dispatch<
     React.SetStateAction<string | null>
   >;
+  cellPositions: Record<string, { x: number; y: number }>;
+  setCellPositions: React.Dispatch<
+    React.SetStateAction<Record<string, { x: number; y: number }>>
+  >;
   toggleBranch: (cellId: string) => void;
   toggleComparisonMode: () => void;
   toggleCellSelection: (cellId: string) => void;
@@ -110,6 +114,9 @@ export function BranchPadProvider({ children }: { children: ReactNode }) {
   const [showParameterSweep, setShowParameterSweep] = useState(false);
   const [selectedCellForParameterSweep, setSelectedCellForParameterSweep] =
     useState<string | null>(null);
+  const [cellPositions, setCellPositions] = useState<
+    Record<string, { x: number; y: number }>
+  >({});
 
   const toggleBranch = (cellId: string) => {
     setCollapsedBranches((prev) => {
@@ -872,6 +879,8 @@ from io import StringIO
     setShowParameterSweep,
     selectedCellForParameterSweep,
     setSelectedCellForParameterSweep,
+    cellPositions,
+    setCellPositions,
     toggleBranch,
     toggleComparisonMode,
     toggleCellSelection,
