@@ -12,9 +12,10 @@ export async function exportNotebook(pyodide: any, cells: Cell[]) {
     // Run the export code directly
     const pythonScript = await pyodide.runPythonAsync(`
 import json
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 import textwrap
 import sys
+import re
 
 class Cell:
     def __init__(self, id: str, code: str, parent_id: Optional[str] = None):
@@ -22,25 +23,48 @@ class Cell:
         self.code = code
         self.parent_id = None if parent_id == "None" else parent_id  # Convert "None" string back to None
 
-def export_to_python(cells: List[Dict]) -> str:
+def extract_imports(code: str) -> Set[str]:
+    """Extract package names from import statements."""
+    imports = set()
+    
+    # Match 'import package' and 'from package import ...'
+    import_patterns = [
+        r'^import\s+(\w+)',  # import numpy
+        r'^from\s+(\w+)\s+import',  # from numpy import array
+        r'^import\s+(\w+)\s+as',  # import numpy as np
+    ]
+    
+    for line in code.split('\\n'):
+        line = line.strip()
+        for pattern in import_patterns:
+            match = re.match(pattern, line)
+            if match:
+                imports.add(match.group(1))
+    
+    return imports
+
+def export_to_python(cells: List[Dict]) -> tuple[str, Set[str]]:
     # Convert cells to Cell objects
     cell_objects = [Cell(c["id"], c["code"], c.get("parentId")) for c in cells]
     
     # Create a mapping of cell IDs to their objects for easy lookup
     cell_map = {cell.id: cell for cell in cell_objects}
     
+    # Track all imports across all cells
+    all_imports = set()
+    
     # Helper function to get execution path from root to a cell
     def get_execution_path(cell_id: str) -> List[Cell]:
         path = []
         current_id = cell_id
-        while current_id is not None:  # Changed to proper Python None check
+        while current_id is not None:
             current_cell = cell_map[current_id]
             path.insert(0, current_cell)
             current_id = current_cell.parent_id
         return path
 
     # Get all leaf cells (cells with no children)
-    child_ids = {c.parent_id for c in cell_objects if c.parent_id is not None}  # Changed to proper Python None check
+    child_ids = {c.parent_id for c in cell_objects if c.parent_id is not None}
     leaf_cells = [c for c in cell_objects if c.id not in child_ids]
     
     # Get all unique execution paths
@@ -63,7 +87,16 @@ def export_to_python(cells: List[Dict]) -> str:
         "        return namespace\\n",
         "    except Exception as e:\\n",
         "        print(f'Error executing cell: {str(e)}', file=sys.stderr)\\n",
-        "        raise\\n\\n"
+        "        raise\\n\\n",
+        "# Function to ensure required packages are installed\\n",
+        "def ensure_packages():\\n",
+        "    try:\\n",
+        "        import micropip\\n",
+        "    except ImportError:\\n",
+        "        print('micropip not available - skipping package installation')\\n",
+        "        return\\n",
+        "    \\n",
+        "    required_packages = {\\n"
     ]
     
     # Add each execution path as a function
@@ -79,6 +112,10 @@ def export_to_python(cells: List[Dict]) -> str:
         
         # Add each cell's code in the path
         for cell in path:
+            # Extract imports from this cell
+            imports = extract_imports(cell.code)
+            all_imports.update(imports)
+            
             # Indent the cell code
             indented_code = textwrap.indent(cell.code.strip(), '        ')
             script_parts.extend([
@@ -92,9 +129,26 @@ def export_to_python(cells: List[Dict]) -> str:
         
         script_parts.append("\\n")
     
+    # Add the required packages to the ensure_packages function
+    for package in sorted(all_imports):
+        script_parts.append(f"        '{package}',\\n")
+    
+    script_parts.extend([
+        "    }\\n",
+        "    \\n",
+        "    for package in required_packages:\\n",
+        "        try:\\n",
+        "            __import__(package)\\n",
+        "        except ImportError:\\n",
+        "            print(f'Installing {package}...')\\n",
+        "            await micropip.install(package)\\n\\n"
+    ])
+    
     # Add main section to run all paths
     script_parts.extend([
         "if __name__ == '__main__':\\n",
+        "    # Ensure required packages are installed\\n",
+        "    ensure_packages()\\n\\n",
         "    # Execute all paths\\n"
     ])
     
@@ -103,10 +157,23 @@ def export_to_python(cells: List[Dict]) -> str:
         script_parts.append(f"    print('\\\\nExecuting {path_name}...')\\n")
         script_parts.append(f"    {path_name}()\\n")
     
-    return "".join(script_parts)
+    return "".join(script_parts), all_imports
 
 # Export the notebook
-result = export_to_python(${JSON.stringify(cellsData)})
+result, imports = export_to_python(${JSON.stringify(cellsData)})
+
+# Install any required packages for the current session
+try:
+    import micropip
+    for package in imports:
+        try:
+            __import__(package)
+        except ImportError:
+            print(f'Installing {package}...')
+            await micropip.install(package)
+except ImportError:
+    print('micropip not available - skipping package installation')
+
 result  # Return the result to JavaScript
     `);
 
@@ -191,6 +258,9 @@ This is an exported BranchPad notebook containing all execution paths and their 
    \`\`\`
 
 The script will execute all paths in the notebook sequentially, maintaining the execution context of each branch.
+
+Note: When running in a browser environment (like BranchPad), required packages will be automatically installed using micropip.
+When running the exported script locally, you should install the packages listed in requirements.txt using pip.
 `;
 
   // Download the README

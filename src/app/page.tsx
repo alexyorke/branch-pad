@@ -221,12 +221,59 @@ from io import StringIO
         { globals: namespace }
       );
 
+      // Helper function to extract package imports
+      const extractImports = (code: string): string[] => {
+        const importRegex = /^(?:from\s+(\w+)|import\s+(\w+))/gm;
+        const imports: string[] = [];
+        let match;
+        while ((match = importRegex.exec(code)) !== null) {
+          const pkg = match[1] || match[2];
+          if (pkg && !["sys", "io"].includes(pkg)) {
+            imports.push(pkg);
+          }
+        }
+        return imports;
+      };
+
       // Run all cells in order from root to target
       for (const cell of cellsToRun) {
         cell.error = null;
         cell.output = "";
 
         try {
+          // Check for package imports and install if needed
+          const imports = extractImports(cell.code);
+          if (imports.length > 0) {
+            try {
+              // Load micropip if not already loaded
+              await pyodide.loadPackage("micropip");
+
+              // Install each package
+              for (const pkg of imports) {
+                try {
+                  // Try importing first
+                  await pyodide.runPythonAsync(`import ${pkg}`, {
+                    globals: namespace,
+                  });
+                } catch (err) {
+                  // If import fails, try installing
+                  console.log(`Installing package: ${pkg}`);
+                  await pyodide.runPythonAsync(
+                    `
+                    import micropip
+                    await micropip.install('${pkg}')
+                  `,
+                    { globals: namespace }
+                  );
+                }
+              }
+            } catch (err: any) {
+              console.error("Error installing packages:", err);
+              cell.error = `Error installing packages: ${err.message}`;
+              throw err;
+            }
+          }
+
           // Set up stdout capture
           await pyodide.runPythonAsync("sys.stdout = StringIO()", {
             globals: namespace,
