@@ -1,6 +1,12 @@
-# BranchPad
+# branch-pad
 
-BranchPad is an interactive Python notebook environment that enables branching experimentation and hypothesis testing. It allows researchers and developers to explore multiple approaches simultaneously while maintaining a clear history of their work.
+branch-pad is an interactive Python notebook environment that enables branching experimentation and hypothesis testing. It allows researchers and developers to explore multiple approaches simultaneously while maintaining a clear history of their work.
+
+<img width="1151" alt="image" src="https://github.com/user-attachments/assets/dbe26f80-969a-4fe4-b21c-8a6f1ef81d33" />
+
+<img width="849" alt="image" src="https://github.com/user-attachments/assets/22dc6596-a06b-4b7d-bf74-29a498645af3" />
+
+<img width="530" alt="image" src="https://github.com/user-attachments/assets/f6df5324-7ef9-4d3d-b34d-19677dccc978" />
 
 ## Features
 
@@ -19,6 +25,8 @@ BranchPad is an interactive Python notebook environment that enables branching e
 - **Descriptions**: Add detailed notes about the branch's purpose
 - **Colors**: Choose from multiple color themes for visual organization
 - **Collapsible View**: Toggle branch visibility using the arrow button
+
+<img width="407" alt="image" src="https://github.com/user-attachments/assets/aeb99874-0204-4253-903d-14b583661fcb" />
 
 ### 2. Code Execution
 
@@ -107,8 +115,8 @@ BranchPad is an interactive Python notebook environment that enables branching e
 
 - **Docker Deployment**:
   ```bash
-  docker build -t branchpad-[branch-id] .
-  docker run branchpad-[branch-id]
+  docker build -t branch-pad-[branch-id] .
+  docker run branch-pad-[branch-id]
   ```
 
 ### 6. UI Features
