@@ -36,6 +36,24 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [pyodide, setPyodide] = useState<any>(null);
 
+  // Helper function to get all parent cells in order from root to the target cell
+  const getParentCells = (cellId: string): Cell[] => {
+    const result: Cell[] = [];
+    const initialCell = cells.find((cell) => cell.id === cellId);
+    if (!initialCell) return result;
+
+    let currentCell = initialCell;
+    while (true) {
+      result.unshift(currentCell);
+      if (!currentCell.parentId) break;
+      const parentCell = cells.find((cell) => cell.id === currentCell.parentId);
+      if (!parentCell) break;
+      currentCell = parentCell;
+    }
+
+    return result;
+  };
+
   useEffect(() => {
     async function initPyodide() {
       try {
@@ -187,9 +205,7 @@ from io import StringIO
     if (cellIndex === -1) return;
 
     const updatedCells = [...cells];
-    const cell = updatedCells[cellIndex];
-    cell.error = null;
-    cell.output = "";
+    const cellsToRun = getParentCells(cellId);
 
     try {
       // Create a fresh namespace
@@ -200,39 +216,42 @@ from io import StringIO
         `
 import sys
 from io import StringIO
-      `,
+        `,
         { globals: namespace }
       );
 
-      // Load the cell's saved context if it exists
-      if (cell.executionContext) {
-        // Create a temporary namespace to hold the context
-        const tempNamespace = pyodide.globals.get("dict")();
-        tempNamespace.update(cell.executionContext);
-        namespace.update(tempNamespace);
+      // Run all cells in order from root to target
+      for (const cell of cellsToRun) {
+        cell.error = null;
+        cell.output = "";
+
+        try {
+          // Set up stdout capture
+          await pyodide.runPythonAsync("sys.stdout = StringIO()", {
+            globals: namespace,
+          });
+
+          // Run the cell's code
+          await pyodide.runPythonAsync(cell.code, { globals: namespace });
+
+          // Get the output
+          const stdout = await pyodide.runPythonAsync("sys.stdout.getvalue()", {
+            globals: namespace,
+          });
+          cell.output = stdout;
+
+          // Save the execution context
+          cell.executionContext = namespace;
+
+          // Reset stdout
+          await pyodide.runPythonAsync("sys.stdout = sys.__stdout__", {
+            globals: namespace,
+          });
+        } catch (err: any) {
+          cell.error = err.message;
+          throw err; // Propagate error to stop execution of subsequent cells
+        }
       }
-
-      // Set up stdout capture
-      await pyodide.runPythonAsync("sys.stdout = StringIO()", {
-        globals: namespace,
-      });
-
-      // Run the cell's code
-      await pyodide.runPythonAsync(cell.code, { globals: namespace });
-
-      // Get the output
-      const stdout = await pyodide.runPythonAsync("sys.stdout.getvalue()", {
-        globals: namespace,
-      });
-      cell.output = stdout;
-
-      // Save the new execution context
-      cell.executionContext = namespace;
-
-      // Reset stdout
-      await pyodide.runPythonAsync("sys.stdout = sys.__stdout__", {
-        globals: namespace,
-      });
 
       // Update all descendant cells recursively
       const updateDescendants = async (parentId: string) => {
@@ -247,7 +266,7 @@ from io import StringIO
             `
 import sys
 from io import StringIO
-          `,
+            `,
             { globals: childNamespace }
           );
 
@@ -287,7 +306,7 @@ from io import StringIO
 
       setCells(updatedCells);
     } catch (err: any) {
-      cell.error = err.message;
+      // Error handling is now done per-cell in the loop above
       setCells(updatedCells);
     }
   };
@@ -448,8 +467,10 @@ from io import StringIO
     <div className="min-h-screen p-8 flex flex-col items-center gap-8 font-[family-name:var(--font-geist-sans)]">
       <h1 className="text-2xl font-bold text-center">Python Code Input</h1>
 
-      <div className="w-full max-w-[90rem] px-8 overflow-x-auto">
-        {buildTree(cells) && renderTreeNode(buildTree(cells)!)}
+      <div className="w-full overflow-x-auto">
+        <div className="min-w-[90rem] px-8 mx-auto">
+          {buildTree(cells) && renderTreeNode(buildTree(cells)!)}
+        </div>
       </div>
     </div>
   );
