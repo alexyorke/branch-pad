@@ -147,6 +147,21 @@ export default function Home() {
   const [pyodide, setPyodide] = useState<any>(null);
   const [showPackages, setShowPackages] = useState(false);
   const [packageList, setPackageList] = useState<string[]>([]);
+  const [collapsedBranches, setCollapsedBranches] = useState<Set<string>>(
+    new Set()
+  );
+
+  const toggleBranch = (cellId: string) => {
+    setCollapsedBranches((prev) => {
+      const next = new Set(prev);
+      if (next.has(cellId)) {
+        next.delete(cellId);
+      } else {
+        next.add(cellId);
+      }
+      return next;
+    });
+  };
 
   // Helper function to get all parent cells in order from root to the target cell
   const getParentCells = (cellId: string): Cell[] => {
@@ -544,6 +559,8 @@ from io import StringIO
   const renderTreeNode = (node: TreeNode) => {
     const { cell, children } = node;
     const isRoot = !cell.parentId;
+    const isCollapsed = collapsedBranches.has(cell.id);
+    const hasChildren = children.length > 0;
 
     return (
       <div key={cell.id} className="flex flex-col items-center gap-24">
@@ -554,7 +571,7 @@ from io import StringIO
           )}
 
           {/* Child connectors */}
-          {children.length > 0 && (
+          {hasChildren && !isCollapsed && (
             <>
               {/* Vertical line going down */}
               <div className="absolute left-1/2 -translate-x-1/2 -bottom-12 w-0.5 h-12 bg-gray-200 dark:bg-gray-700" />
@@ -577,12 +594,52 @@ from io import StringIO
             className={`
             w-[32rem] space-y-4 border-2 rounded-lg p-4
             ${colorMappings[cell.color as keyof typeof colorMappings].border}
+            ${colorMappings[cell.color as keyof typeof colorMappings].bg}
           `}
           >
             {/* Cell header with branch info */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
+                  {hasChildren && (
+                    <button
+                      onClick={() => toggleBranch(cell.id)}
+                      className={`w-5 h-5 flex items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${
+                        colorMappings[cell.color as keyof typeof colorMappings]
+                          .text
+                      }`}
+                    >
+                      {isCollapsed ? (
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 5l7 7-7 7"
+                          />
+                        </svg>
+                      ) : (
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 9l-7 7-7-7"
+                          />
+                        </svg>
+                      )}
+                    </button>
+                  )}
                   <input
                     type="text"
                     value={cell.label}
@@ -592,7 +649,7 @@ from io import StringIO
                       );
                       setCells(updatedCells);
                     }}
-                    className={`text-sm font-medium bg-transparent border-none focus:outline-none focus:ring-2 focus:ring-${
+                    className={`text-sm font-medium bg-transparent border-none focus:outline-none focus:ring-2 ${
                       colorMappings[cell.color as keyof typeof colorMappings]
                         .ring
                     } rounded px-1 ${
@@ -607,10 +664,13 @@ from io import StringIO
                     </span>
                   )}
                 </div>
-                {children.length > 0 && (
-                  <span className="text-xs text-gray-500">
-                    {children.length} branch{children.length > 1 ? "es" : ""}
-                  </span>
+                {hasChildren && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500">
+                      {children.length} branch{children.length > 1 ? "es" : ""}
+                      {isCollapsed ? " (collapsed)" : ""}
+                    </span>
+                  </div>
                 )}
               </div>
 
@@ -624,9 +684,9 @@ from io import StringIO
                   setCells(updatedCells);
                 }}
                 placeholder="Add branch description..."
-                className={`w-full px-3 py-2 text-sm bg-white/50 dark:bg-gray-900/50 border border-${
+                className={`w-full px-3 py-2 text-sm bg-white/50 dark:bg-gray-900/50 border ${
                   colorMappings[cell.color as keyof typeof colorMappings].border
-                } rounded-lg focus:outline-none focus:ring-2 focus:ring-${
+                } rounded-lg focus:outline-none focus:ring-2 ${
                   colorMappings[cell.color as keyof typeof colorMappings].ring
                 }`}
                 rows={2}
@@ -718,7 +778,7 @@ from io import StringIO
         </div>
 
         {/* Render children */}
-        {children.length > 0 && (
+        {hasChildren && !isCollapsed && (
           <div className="flex justify-center gap-8">
             {children.map((child) => renderTreeNode(child))}
           </div>
