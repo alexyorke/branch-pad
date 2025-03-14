@@ -36,6 +36,8 @@ export default function Home() {
   ]);
   const [loading, setLoading] = useState(false);
   const [pyodide, setPyodide] = useState<any>(null);
+  const [showPackages, setShowPackages] = useState(false);
+  const [packageList, setPackageList] = useState<string[]>([]);
 
   // Helper function to get all parent cells in order from root to the target cell
   const getParentCells = (cellId: string): Cell[] => {
@@ -53,6 +55,37 @@ export default function Home() {
     }
 
     return result;
+  };
+
+  const getInstalledPackages = async () => {
+    if (!pyodide) return;
+
+    try {
+      const packages = await pyodide.runPythonAsync(`
+import sys
+
+# Get a list of all imported modules
+modules = list(sys.modules.keys())
+
+# Filter out built-in modules and create requirements list
+requirements = []
+for module in sorted(modules):
+    # Skip private modules and built-ins
+    if not module.startswith('_') and module not in sys.builtin_module_names:
+        try:
+            mod = sys.modules[module]
+            version = getattr(mod, '__version__', 'latest')
+            requirements.append(f"{module}=={version}")
+        except:
+            pass
+
+requirements
+      `);
+      setPackageList(packages);
+      setShowPackages(true);
+    } catch (error) {
+      console.error("Error getting package list:", error);
+    }
   };
 
   useEffect(() => {
@@ -526,7 +559,59 @@ from io import StringIO
         >
           Export Notebook
         </button>
+        <button
+          onClick={getInstalledPackages}
+          disabled={loading || !pyodide}
+          className={`px-4 py-2 rounded-lg font-medium text-white ${
+            loading || !pyodide
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-orange-500 hover:bg-orange-600"
+          }`}
+        >
+          Show Packages
+        </button>
       </div>
+
+      {/* Package Modal */}
+      {showPackages && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Installed Packages</h2>
+              <button
+                onClick={() => setShowPackages(false)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="space-y-2">
+              <input
+                type="text"
+                placeholder="Search packages..."
+                className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 dark:bg-gray-900"
+                onChange={(e) => {
+                  const searchTerm = e.target.value.toLowerCase();
+                  const filteredPackages = packageList.filter((pkg) =>
+                    pkg.toLowerCase().includes(searchTerm)
+                  );
+                  setPackageList(filteredPackages);
+                }}
+              />
+              <div className="mt-4 space-y-1">
+                {packageList.map((pkg, index) => (
+                  <div
+                    key={index}
+                    className="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-900 rounded"
+                  >
+                    <code className="font-mono text-sm">{pkg}</code>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="w-full overflow-x-auto">
         <div className="min-w-[90rem] px-8 mx-auto">
