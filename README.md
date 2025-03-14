@@ -1,6 +1,6 @@
 # branch-pad
 
-BranchPad is an interactive Python notebook environment that allows you to create and explore multiple branches of code execution. Unlike traditional notebooks that follow a linear execution flow, BranchPad enables you to fork your code at any point, creating independent branches that maintain their own execution context.
+branch-pad is an interactive Python notebook environment that allows you to create and explore multiple branches of code execution. Unlike traditional notebooks that follow a linear execution flow, branch-pad enables you to fork your code at any point, creating independent branches that maintain their own execution context.
 
 **Currently in beta** and this is just an MVP.
 
