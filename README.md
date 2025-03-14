@@ -8,6 +8,12 @@ branch-pad is an interactive Python notebook environment that allows you to crea
 
 It's also reactive--any changes to the parent causes all siblings to re-execute. Notebooks can be exported and are just Python scripts and a requirements.txt file.
 
+To install a package, just use it, e.g., "import numpy". You can find the installed version as well:
+
+<img width="453" alt="image" src="https://github.com/user-attachments/assets/a76c17e2-0b9f-4817-b10c-7f86a76a37c4" />
+<img width="526" alt="image" src="https://github.com/user-attachments/assets/ab9230e8-e0c0-4de8-9404-3a6c7333450e" />
+
+
 ## Features
 
 - **Interactive Python Environment**: Run Python code directly in your browser using Pyodide
