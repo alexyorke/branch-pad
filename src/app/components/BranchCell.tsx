@@ -3,6 +3,7 @@
 import { Cell, colorMappings } from "../types";
 import Editor from "@monaco-editor/react";
 import { useState, useRef, useEffect } from "react";
+import "../lib/monaco"; // Import Monaco configuration
 
 interface BranchCellProps {
   cell: Cell;
@@ -235,7 +236,7 @@ export function BranchCell({
 
       <div
         ref={editorContainerRef}
-        className="bg-secondary/30 dark:bg-secondary/10 border border-border/50 rounded-md overflow-hidden shadow-sm mt-4 flex flex-col"
+        className="bg-secondary/30 dark:bg-secondary/10 border border-border/50 rounded-md overflow-hidden shadow-sm mt-4 flex flex-col relative"
         style={{ height: `${editorHeight}px` }}
       >
         <div className="flex items-center justify-between px-3 py-1.5 bg-secondary/50 dark:bg-secondary/30 border-b border-border/50">
@@ -300,16 +301,25 @@ export function BranchCell({
         <Editor
           height={`${editorHeight - 30}px`} // Subtract header height
           defaultLanguage="python"
-          theme={
-            typeof window !== "undefined" &&
-            window.matchMedia("(prefers-color-scheme: dark)").matches
-              ? "vs-dark"
-              : "light"
-          }
+          theme="light"
           value={cell.code}
           onChange={(value) => {
             if (value !== undefined) {
               onCodeChange(cell.id, value);
+            }
+          }}
+          loading={
+            <div className="text-sm text-secondary-foreground/60">
+              Loading editor...
+            </div>
+          }
+          beforeMount={(monaco) => {
+            // Set theme based on system preference on client side
+            if (
+              typeof window !== "undefined" &&
+              window.matchMedia("(prefers-color-scheme: dark)").matches
+            ) {
+              monaco.editor.setTheme("vs-dark");
             }
           }}
           options={{
@@ -354,13 +364,10 @@ export function BranchCell({
         />
         {/* Resize handle */}
         <div
-          className={`h-2 w-full cursor-ns-resize flex items-center justify-center hover:bg-secondary/50 ${
-            isResizing ? "bg-primary/20" : ""
-          }`}
+          className="absolute bottom-0 left-0 right-0 h-1.5 bg-transparent hover:bg-primary/20 cursor-ns-resize"
           onMouseDown={handleResizeStart}
-        >
-          <div className="w-16 h-1 rounded-full bg-secondary-foreground/20"></div>
-        </div>
+          title="Drag to resize"
+        />
       </div>
 
       <div
