@@ -1,5 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Keep the Pages export settings in the JavaScript config that Next.js loads.
+  output: "export",
+  basePath: process.env.NEXT_PUBLIC_BASE_PATH || "",
+  assetPrefix: process.env.NEXT_PUBLIC_BASE_PATH || "",
+  images: { unoptimized: true },
+  trailingSlash: true,
   webpack: (config, { isServer }) => {
     // Add a rule for handling Monaco Editor's web workers
     config.module.rules.push({
