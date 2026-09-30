@@ -6,12 +6,17 @@ describe("DeleteConfirmDialog", () => {
   const mockCell: Cell = {
     id: "1",
     label: "Test Branch",
-    x: 0,
-    y: 0,
-    width: 100,
-    height: 50,
+    code: "",
+    output: "",
+    error: null,
+    executionContext: {},
+    description: "",
+    color: "blue",
+    snapshots: [],
+    currentSnapshotId: null,
+    parameters: [],
+    parameterSweeps: [],
     parentId: null,
-    childrenIds: [],
   };
 
   const mockProps = {
