@@ -4,12 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build --webpack",
+    "build": "next build --webpack && npm run typecheck",
     "start": "next start",
     "lint": "eslint .",
-    "export": "next build --webpack",
+    "export": "next build --webpack && npm run typecheck",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
@@ -36,7 +37,8 @@
     "jest-environment-jsdom": "^30.4.1",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
-    "typescript": "^6",
-    "worker-loader": "^3.0.8"
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "worker-loader": "^3.0.8",
+    "@typescript/native": "npm:typescript@^7.0.2"
   }
 }
