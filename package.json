@@ -34,7 +34,7 @@
     "eslint": "^10.6.0",
     "eslint-config-next": "^16.3.6",
     "jest": "^30.4.2",
-    "jest-environment-jsdom": "^30.4.1",
+    "jest-environment-jsdom": "^30.5.2",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
