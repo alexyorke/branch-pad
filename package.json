@@ -17,8 +17,8 @@
     "jszip": "^3.10.2",
     "monaco-editor": "^0.57.0",
     "next": "16.3.6",
-    "react": "^19.0.0",
-    "react-dom": "^19.2.7"
+    "react": "^19.3.0",
+    "react-dom": "19.3.0"
   },
   "devDependencies": {
     "@eslint/compat": "^2.1.1",
@@ -38,7 +38,6 @@
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
-    "worker-loader": "^3.0.8",
-    "@typescript/native": "npm:typescript@^7.0.2"
+    "worker-loader": "^3.0.8"
   }
 }
